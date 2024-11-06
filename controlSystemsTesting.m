@@ -32,6 +32,9 @@ a.kp = 500; % Need at least 500
 a.kd = 200; % Need at least 200
 a.ki = 200; % Need at least 200
 
+a.r_g = 0.3;
+a.r_k = 0.4;
+
 % Desired deck position
 a.pr_ref = 0.5; % desired relative position of platform (m)
 
@@ -118,7 +121,7 @@ pr_err = s(1)-a.d(t)-a.pr_ref;
 % operation region, smallest in center of operation region)
 
 % Piecewise-linear gain proportion
-r_k = 0;
+r_k = a.r_k;
 k = (1/(a.pr_ref-r_k))*(abs(pr_err)-r_k)*(abs(pr_err) > r_k);
 kp = a.kp*k; % Proportional
 kd = a.kd*k; % Derivative
@@ -133,7 +136,7 @@ ki = a.ki*k; % Integral
 % smallest near boudnaries of operation region)
 
 % Piecewise-linear control law
-r_g = 0.1; % Radius/distace from center for full acceleration control
+r_g = a.r_g; % Radius/distace from center for full acceleration control
 G = a.G*(((-1/(a.pr_ref-r_g))*(abs(pr_err)-r_g)+1)*(abs(pr_err) > r_g) ...
             + 1*(abs(pr_err) <= r_g));
 
