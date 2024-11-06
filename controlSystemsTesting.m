@@ -3,7 +3,7 @@ close all; clear; clc;
 % Rigid arm system with control
 a.m = 1; % Mass (kg)
 a.g = 9.81; % Acceleration of gravity (m/s^2)
-tspan = [0 10]; % Simulation time (s)
+tspan = [0 20]; % Simulation time (s)
 
 
 % Disturbance equations
@@ -14,7 +14,7 @@ Tmax = 7.5; % Maximum period
 hdeck = 1; % inertial reference deck hight (m) (arbitrary)
 
 % Values
-k = 2;
+k = 1;
 T = Tmax / k; % Period of deck disturbance (s)
 beta = (2*pi/T); % wave frequency (rad/s)
 
@@ -27,10 +27,10 @@ a.d2dot = @(t) -beta^2*alpha*sin(beta*t);
 % Gains, desired position, and initial state\
 
 % Control constants
-a.G = 700; % Need at least 700
-a.kd = 0;
-a.kp = 0;
-a.ki = 0;
+a.G = 700;    % Need at least 700
+a.kp = 500; % Need at least 500
+a.kd = 200; % Need at least 200
+a.ki = 200; % Need at least 200
 
 % Desired deck position
 a.pr_ref = 0.5; % desired relative position of platform (m)
@@ -75,8 +75,14 @@ title('Acceleration vs Time')
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
 legend('Platform', 'Deck')
-close all;
-disp(max(abs(p2dot))<p2dot_max)
+
+
+% Plotting relative position
+figure;
+plot(t,s(:,1)-a.d(t))
+title('Relative Position vs Time')
+xlabel('Time (s)')
+ylabel('Position (m)')
 
 
 function sdot = rigidArmControl(t, s, a)
@@ -110,24 +116,29 @@ pr_err = s(1)-a.d(t)-a.pr_ref;
 
 % Magnitude of relative position PID control (largest near bounds of
 % operation region, smallest in center of operation region)
-% kp = a.kp*abs(pr_err) / 0.5; % Proportional
-% kd = a.kd*abs(pr_err) / 0.5; % Derivative
-% ki = a.ki*abs(pr_err) / 0.5; % Integral
+
+% Piecewise-linear gain proportion
+r_k = 0;
+k = (1/(a.pr_ref-r_k))*(abs(pr_err)-r_k)*(abs(pr_err) > r_k);
+kp = a.kp*k; % Proportional
+kd = a.kd*k; % Derivative
+ki = a.ki*k; % Integral
 
 % For testing acceleration and relative position control seperately
-kp = a.kp; % Proportional
-kd = a.kd; % Derivative
-ki = a.ki; % Integral
+% kp = a.kp; % Proportional
+% kd = a.kd; % Derivative
+% ki = a.ki; % Integral
 
 % Magnitude of acceleration control (largest in center of operation region,
 % smallest near boudnaries of operation region)
-% G = 0;
-% if (abs(pr_err) < 0.5)
-%     G = a.G * (1 - abs(pr_err) / 0.5);
-% end
+
+% Piecewise-linear control law
+r_g = 0.1; % Radius/distace from center for full acceleration control
+G = a.G*(((-1/(a.pr_ref-r_g))*(abs(pr_err)-r_g)+1)*(abs(pr_err) > r_g) ...
+            + 1*(abs(pr_err) <= r_g));
 
 % For testing acceleration and relative position control seperately
-G = a.G;
+% G = a.G;
 
 % Derivative of states
 sdot = zeros(3,1);
