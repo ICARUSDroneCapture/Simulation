@@ -1,9 +1,22 @@
 close all; clear; clc;
 
+% Example performance
+% a.m = 1;
+% alpha = 0.4;
+% k = 1;
+% a.G = 700;
+% a.H = 3000;
+% a.kp = 1000; 
+% a.kd = 700; 
+% a.ki = 200; 
+
+a.r_g = 0.4;
+a.r_k = 0.4;
+
 % Rigid arm system with control
 a.m = 1; % Mass (kg)
 a.g = 9.81; % Acceleration of gravity (m/s^2)
-tspan = [0 10]; % Simulation time (s)
+tspan = [0 100]; % Simulation time (s)
 
 
 % Disturbance equations
@@ -29,14 +42,14 @@ a.d2dot = @(t) -beta^2*alpha*sin(beta*t);
 % Control constants
 
 % Inertial Stabilization Control
-a.G = 000;  % Need at least 2800; Acceleration Control [kg]
-a.H = 0000;  % Need at least  (look at G/H to get 2s settling time)  ; Velocity Control [kg/s]
+a.G = 700;  % Need at least 2800; Acceleration Control [kg]
+a.H = 3000;  % Need at least  (look at G/H to get 2s settling time)  ; Velocity Control [kg/s]
 % Relative Position Control
-a.kp = 100; % Need at least 500; Proportional [kg*s^-2]
-a.kd = 000; % Need at least 200; Derivative [kg/s]
-a.ki = 000; % Need at least 200; Integral [kg*s^-3]
+a.kp = 3000; % Need at least 500; Proportional [kg*s^-2]
+a.kd = 1000; % Need at least 200; Derivative [kg/s]
+a.ki = 200; % Need at least 200; Integral [kg*s^-3]
 
-a.r_g = 0.3;
+a.r_g = 0.4;
 a.r_k = 0.4;
 
 % Desired deck position
@@ -144,17 +157,17 @@ pr_err = s(1)-a.d(t)-a.pr_ref;
 % Piecewise-linear gain proportion
 
 % Radius/distace from center for zero relative position control
-% r_k = a.r_k; 
-% 
-% k = (1/(a.pr_ref-r_k))*(abs(pr_err)-r_k)*(abs(pr_err) > r_k);
-% kp = a.kp*k; % Proportional [kg*s^-2]
-% kd = a.kd*k; % Derivative   [kg/s]
-% ki = a.ki*k; % Integral     [kg*s^-3]
+r_k = a.r_k; 
+
+k = (1/(a.pr_ref-r_k))*(abs(pr_err)-r_k)*(abs(pr_err) > r_k);
+kp = a.kp*k; % Proportional [kg*s^-2]
+kd = a.kd*k; % Derivative   [kg/s]
+ki = a.ki*k; % Integral     [kg*s^-3]
 
 % For testing acceleration and relative position control seperately
-kp = a.kp; % Proportional [kg*s^-2]
-kd = a.kd; % Derivative   [kg/s]
-ki = a.ki; % Integral     [kg*s^-3]
+% kp = a.kp; % Proportional [kg*s^-2]
+% kd = a.kd; % Derivative   [kg/s]
+% ki = a.ki; % Integral     [kg*s^-3]
 
 % Magnitude of acceleration control (largest in center of operation region,
 % smallest near boudnaries of operation region)
@@ -162,16 +175,16 @@ ki = a.ki; % Integral     [kg*s^-3]
 % Piecewise-linear control law
 
 % Radius/distace from center for full inertial control
-% r_g = a.r_g; 
-% 
-% c = (((-1/(a.pr_ref-r_g))*(abs(pr_err)-r_g)+1)*(abs(pr_err) > r_g) ...
-%             + 1*(abs(pr_err) <= r_g));
-% G = a.G*c; % Acceleration gain [kg]
-% H = a.H*c; % Velocity gain     [kg/s]
+r_g = a.r_g; 
+
+c = (((-1/(a.pr_ref-r_g))*(abs(pr_err)-r_g)+1)*(abs(pr_err) > r_g) ...
+            + 1*(abs(pr_err) <= r_g));
+G = a.G*c; % Acceleration gain [kg]
+H = a.H*c; % Velocity gain     [kg/s]
 
 % For testing acceleration and relative position control seperately
-G = a.G; % Acceleration gain [kg]
-H = a.H; % Velocity gain     [kg/s]
+% G = a.G; % Acceleration gain [kg]
+% H = a.H; % Velocity gain     [kg/s]
 
 % Derivative of states
 sdot = zeros(3,1);
