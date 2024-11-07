@@ -3,13 +3,13 @@ close all; clear; clc;
 % Rigid arm system with control
 a.m = 1; % Mass (kg)
 a.g = 9.81; % Acceleration of gravity (m/s^2)
-tspan = [0 20]; % Simulation time (s)
+tspan = [0 10]; % Simulation time (s)
 
 
 % Disturbance equations
 
 % Parameters
-alpha = 0.5; % wave amplitdue (m)
+alpha = 0.4; % wave amplitdue (m)
 Tmax = 7.5; % Maximum period
 hdeck = 1; % inertial reference deck hight (m) (arbitrary)
 
@@ -24,13 +24,17 @@ a.ddot = @(t) beta*alpha*cos(beta*t);
 a.d2dot = @(t) -beta^2*alpha*sin(beta*t);
 
 
-% Gains, desired position, and initial state\
+% Gains, desired position, and initial state
 
 % Control constants
-a.G = 700;    % Need at least 700
-a.kp = 500; % Need at least 500
-a.kd = 200; % Need at least 200
-a.ki = 200; % Need at least 200
+
+% Inertial Stabilization Control
+a.G = 000;  % Need at least 2800; Acceleration Control [kg]
+a.H = 0000;  % Need at least  (look at G/H to get 2s settling time)  ; Velocity Control [kg/s]
+% Relative Position Control
+a.kp = 100; % Need at least 500; Proportional [kg*s^-2]
+a.kd = 000; % Need at least 200; Derivative [kg/s]
+a.ki = 000; % Need at least 200; Integral [kg*s^-3]
 
 a.r_g = 0.3;
 a.r_k = 0.4;
@@ -39,6 +43,7 @@ a.r_k = 0.4;
 a.pr_ref = 0.5; % desired relative position of platform (m)
 
 % Initial State
+% s0 = [p0, pdot0, pr_err_accum0];
 s0 = [a.d(tspan(1))+a.pr_ref; a.ddot(tspan(1)); 0];
 
 op = odeset('RelTol',1e-12,'AbsTol',1e-12);
@@ -81,11 +86,27 @@ legend('Platform', 'Deck')
 
 
 % Plotting relative position
-figure;
-plot(t,s(:,1)-a.d(t))
-title('Relative Position vs Time')
-xlabel('Time (s)')
-ylabel('Position (m)')
+% figure;
+% plot(t,s(:,1)-a.d(t))
+% hold on
+% % Plotting inertial control region
+% x = [tspan, flip(tspan)];
+% yf = [a.pr_ref-a.r_g, a.pr_ref-a.r_g, a.pr_ref+a.r_g, a.pr_ref+a.r_g];
+% yta = [a.pr_ref+a.r_g, a.pr_ref+a.r_g, 1, 1];
+% ytb = [0, 0, a.pr_ref-a.r_g, a.pr_ref-a.r_g];
+% fill(x,yf,'y','FaceAlpha',0.2,'EdgeColor','none')
+% fill(x,yta,'g','FaceAlpha',0.2,'EdgeColor','none')
+% fill(x,ytb,'g','FaceAlpha',0.2,'EdgeColor','none')
+% % Plotting Relative position control region
+% x = [tspan, flip(tspan)];
+% yta = [a.pr_ref+a.r_k, a.pr_ref+a.r_k, 1, 1];
+% ytb = [0, 0, a.pr_ref-a.r_k, a.pr_ref-a.r_k];
+% fill(x,yta,'b','FaceAlpha',0.2,'EdgeColor','none')
+% fill(x,ytb,'b','FaceAlpha',0.2,'EdgeColor','none')
+% title('Relative Position vs Time')
+% xlabel('Time (s)')
+% ylabel('Position (m)')
+% legend('','Full Inertial','Transitional Inertial','','Transitional Relative Position','')
 
 
 function sdot = rigidArmControl(t, s, a)
@@ -121,35 +142,45 @@ pr_err = s(1)-a.d(t)-a.pr_ref;
 % operation region, smallest in center of operation region)
 
 % Piecewise-linear gain proportion
-r_k = a.r_k;
-k = (1/(a.pr_ref-r_k))*(abs(pr_err)-r_k)*(abs(pr_err) > r_k);
-kp = a.kp*k; % Proportional
-kd = a.kd*k; % Derivative
-ki = a.ki*k; % Integral
+
+% Radius/distace from center for zero relative position control
+% r_k = a.r_k; 
+% 
+% k = (1/(a.pr_ref-r_k))*(abs(pr_err)-r_k)*(abs(pr_err) > r_k);
+% kp = a.kp*k; % Proportional [kg*s^-2]
+% kd = a.kd*k; % Derivative   [kg/s]
+% ki = a.ki*k; % Integral     [kg*s^-3]
 
 % For testing acceleration and relative position control seperately
-% kp = a.kp; % Proportional
-% kd = a.kd; % Derivative
-% ki = a.ki; % Integral
+kp = a.kp; % Proportional [kg*s^-2]
+kd = a.kd; % Derivative   [kg/s]
+ki = a.ki; % Integral     [kg*s^-3]
 
 % Magnitude of acceleration control (largest in center of operation region,
 % smallest near boudnaries of operation region)
 
 % Piecewise-linear control law
-r_g = a.r_g; % Radius/distace from center for full acceleration control
-G = a.G*(((-1/(a.pr_ref-r_g))*(abs(pr_err)-r_g)+1)*(abs(pr_err) > r_g) ...
-            + 1*(abs(pr_err) <= r_g));
+
+% Radius/distace from center for full inertial control
+% r_g = a.r_g; 
+% 
+% c = (((-1/(a.pr_ref-r_g))*(abs(pr_err)-r_g)+1)*(abs(pr_err) > r_g) ...
+%             + 1*(abs(pr_err) <= r_g));
+% G = a.G*c; % Acceleration gain [kg]
+% H = a.H*c; % Velocity gain     [kg/s]
 
 % For testing acceleration and relative position control seperately
-% G = a.G;
+G = a.G; % Acceleration gain [kg]
+H = a.H; % Velocity gain     [kg/s]
 
 % Derivative of states
 sdot = zeros(3,1);
 % Inertial Velocity
 sdot(1) = pdot;
+% Relative position control force
+f_pr = -(kp*(p-a.d(t)-a.pr_ref) + ki*pr_err_accum + kd*(pdot-a.ddot(t)));
 % Inertial Acceleration
-sdot(2) = -(a.m*a.g + kd*(pdot-a.ddot(t)) + kp*(p-a.d(t)-a.pr_ref) ...
-    + ki*pr_err_accum) / (a.m + G);
+sdot(2) = (-H*pdot + f_pr - a.m*a.g) / (a.m + G);
 % Error in relative position
 sdot(3) = pr_err;
 
