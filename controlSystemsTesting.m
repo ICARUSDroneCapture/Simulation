@@ -1,23 +1,9 @@
 close all; clear; clc;
 
-% Example performance
-% a.m = 1;
-% alpha = 0.4;
-% k = 1;
-% a.G = 700;
-% a.H = 3000;
-% a.kp = 1000; 
-% a.kd = 700; 
-% a.ki = 200; 
-
-a.r_g = 0.4;
-a.r_k = 0.4;
-a.h_k = 0.0;
-
 % Rigid arm system with control
 a.m = 1; % Mass (kg)
 a.g = 9.81; % Acceleration of gravity (m/s^2)
-tspan = [0 100]; % Simulation time (s)
+tspan = [0 50]; % Simulation time (s)
 
 
 % Disturbance equations
@@ -27,18 +13,16 @@ alpha = 0.4; % wave amplitdue (m)
 Tmax = 7.5; % Maximum period
 hdeck = 1; % inertial reference deck hight (m) (arbitrary)
 
-% Values
+% Wave frequency
 k = 1;
 T = Tmax / k; % Period of deck disturbance (s)
 beta = (2*pi/T); % wave frequency (rad/s)
 
 % Deck motion functions
-a.d = @(t) alpha*sin(beta*t) + hdeck;
-a.ddot = @(t) beta*alpha*cos(beta*t);
-a.d2dot = @(t) -beta^2*alpha*sin(beta*t);
+a.d = @(t) alpha*sin(beta*t) + hdeck; % [m]
+a.ddot = @(t) beta*alpha*cos(beta*t); % [m/s]
+a.d2dot = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
 
-
-% Gains, desired position, and initial state
 
 % Control constants
 
@@ -50,15 +34,21 @@ a.kp = 3000; % Need at least 500; Proportional [kg*s^-2]
 a.kd = 500; % Need at least 200; Derivative [kg/s]
 a.ki = 200; % Need at least 200; Integral [kg*s^-3]
 
-a.r_g = 0.4;
-a.r_k = 0.4;
+% Radius from center of operation region for full inertial control
+a.r_g = 0.4; % [m]
+% Radius from center of operation region for base-line proportion of
+% relative position control
+a.r_k = 0.4; % [m]
+a.h_k = 0.05; % Base-line proportion
 
 % Desired deck position
 a.pr_ref = 0.5; % desired relative position of platform (m)
 
-% Initial State
-% s0 = [p0, pdot0, pr_err_accum0];
-s0 = [a.d(tspan(1))+a.pr_ref; a.ddot(tspan(1)); 0];
+% Initial States
+p0 =  a.d(tspan(1))+a.pr_ref; % Initial inertial platform position
+pdot0 = a.ddot(tspan(1));  % Initial inertial platform velocity
+pr_err_accum0 = 0;
+s0 = [p0; pdot0; pr_err_accum0];
 
 op = odeset('RelTol',1e-12,'AbsTol',1e-12);
 [t, s] = ode45(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
@@ -68,16 +58,17 @@ p2dot_max = 0.005*beta^2;
 
 % Plotting Position vs Time and Acceleration vs Time
 figure;
+sgtitle('Non-Zero Relative Positon Control during Inertial Control')
 
 % Position
 subplot(1,2,1);
 plot(t,s(:,1))
 hold on
 plot(t,a.d(t))
-title('Position vs Time')
+title('Inertial Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
-legend('Platform', 'Deck')
+legend('Platform', 'Deck','Location','southeast')
 
 % Acceleration
 subplot(1,2,2);
@@ -93,10 +84,10 @@ hold on
 plot(t,a.d2dot(t))
 yline(p2dot_max,'--')
 yline(-p2dot_max,'--')
-title('Acceleration vs Time')
+title('Inertial Acceleration vs Time')
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
-legend('Platform', 'Deck')
+legend('Platform', 'Deck','Location','southeast')
 
 
 % Plotting relative position
