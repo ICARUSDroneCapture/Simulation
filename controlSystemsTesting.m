@@ -12,6 +12,7 @@ close all; clear; clc;
 
 a.r_g = 0.4;
 a.r_k = 0.4;
+a.h_k = 0.0;
 
 % Rigid arm system with control
 a.m = 1; % Mass (kg)
@@ -43,10 +44,10 @@ a.d2dot = @(t) -beta^2*alpha*sin(beta*t);
 
 % Inertial Stabilization Control
 a.G = 700;  % Need at least 2800; Acceleration Control [kg]
-a.H = 3000;  % Need at least  (look at G/H to get 2s settling time)  ; Velocity Control [kg/s]
+a.H = 5000;  % Need at least  (look at G/H to get 2s settling time)  ; Velocity Control [kg/s]
 % Relative Position Control
 a.kp = 3000; % Need at least 500; Proportional [kg*s^-2]
-a.kd = 1000; % Need at least 200; Derivative [kg/s]
+a.kd = 500; % Need at least 200; Derivative [kg/s]
 a.ki = 200; % Need at least 200; Integral [kg*s^-3]
 
 a.r_g = 0.4;
@@ -99,27 +100,27 @@ legend('Platform', 'Deck')
 
 
 % Plotting relative position
-% figure;
-% plot(t,s(:,1)-a.d(t))
-% hold on
-% % Plotting inertial control region
-% x = [tspan, flip(tspan)];
-% yf = [a.pr_ref-a.r_g, a.pr_ref-a.r_g, a.pr_ref+a.r_g, a.pr_ref+a.r_g];
-% yta = [a.pr_ref+a.r_g, a.pr_ref+a.r_g, 1, 1];
-% ytb = [0, 0, a.pr_ref-a.r_g, a.pr_ref-a.r_g];
-% fill(x,yf,'y','FaceAlpha',0.2,'EdgeColor','none')
-% fill(x,yta,'g','FaceAlpha',0.2,'EdgeColor','none')
-% fill(x,ytb,'g','FaceAlpha',0.2,'EdgeColor','none')
-% % Plotting Relative position control region
-% x = [tspan, flip(tspan)];
-% yta = [a.pr_ref+a.r_k, a.pr_ref+a.r_k, 1, 1];
-% ytb = [0, 0, a.pr_ref-a.r_k, a.pr_ref-a.r_k];
-% fill(x,yta,'b','FaceAlpha',0.2,'EdgeColor','none')
-% fill(x,ytb,'b','FaceAlpha',0.2,'EdgeColor','none')
-% title('Relative Position vs Time')
-% xlabel('Time (s)')
-% ylabel('Position (m)')
-% legend('','Full Inertial','Transitional Inertial','','Transitional Relative Position','')
+figure;
+plot(t,s(:,1)-a.d(t))
+hold on
+% Plotting inertial control region
+x = [tspan, flip(tspan)];
+yf = [a.pr_ref-a.r_g, a.pr_ref-a.r_g, a.pr_ref+a.r_g, a.pr_ref+a.r_g];
+yta = [a.pr_ref+a.r_g, a.pr_ref+a.r_g, 1, 1];
+ytb = [0, 0, a.pr_ref-a.r_g, a.pr_ref-a.r_g];
+fill(x,yf,'y','FaceAlpha',0.2,'EdgeColor','none')
+fill(x,yta,'g','FaceAlpha',0.2,'EdgeColor','none')
+fill(x,ytb,'g','FaceAlpha',0.2,'EdgeColor','none')
+% Plotting Relative position control region
+x = [tspan, flip(tspan)];
+yta = [a.pr_ref+a.r_k, a.pr_ref+a.r_k, 1, 1];
+ytb = [0, 0, a.pr_ref-a.r_k, a.pr_ref-a.r_k];
+fill(x,yta,'b','FaceAlpha',0.2,'EdgeColor','none')
+fill(x,ytb,'b','FaceAlpha',0.2,'EdgeColor','none')
+title('Relative Position vs Time')
+xlabel('Time (s)')
+ylabel('Position (m)')
+legend('','Full Inertial','Transitional Inertial','','Transitional Relative Position','')
 
 
 function sdot = rigidArmControl(t, s, a)
@@ -157,9 +158,11 @@ pr_err = s(1)-a.d(t)-a.pr_ref;
 % Piecewise-linear gain proportion
 
 % Radius/distace from center for zero relative position control
-r_k = a.r_k; 
+r_k = a.r_k;
+h_k = a.h_k; % Baseline proportion of relative position control used
 
-k = (1/(a.pr_ref-r_k))*(abs(pr_err)-r_k)*(abs(pr_err) > r_k);
+k = (((h_k-1)/(r_k+a.pr_ref-1))*(abs(pr_err)-r_k)+h_k)*(abs(pr_err) > r_k) ...
+        + h_k*(abs(pr_err) <= r_k);
 kp = a.kp*k; % Proportional [kg*s^-2]
 kd = a.kd*k; % Derivative   [kg/s]
 ki = a.ki*k; % Integral     [kg*s^-3]
@@ -177,8 +180,8 @@ ki = a.ki*k; % Integral     [kg*s^-3]
 % Radius/distace from center for full inertial control
 r_g = a.r_g; 
 
-c = (((-1/(a.pr_ref-r_g))*(abs(pr_err)-r_g)+1)*(abs(pr_err) > r_g) ...
-            + 1*(abs(pr_err) <= r_g));
+c = ((-1/(a.pr_ref-r_g))*(abs(pr_err)-r_g)+1)*(abs(pr_err) > r_g) ...
+            + 1*(abs(pr_err) <= r_g);
 G = a.G*c; % Acceleration gain [kg]
 H = a.H*c; % Velocity gain     [kg/s]
 
