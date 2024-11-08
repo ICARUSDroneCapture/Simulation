@@ -45,7 +45,7 @@ op = odeset('RelTol',1e-12,'AbsTol',1e-12);
 p2dot_max = 0.005*beta^2;
 
 % Plotting Position vs Time and Acceleration vs Time
-figure;
+figure(1);
 
 % Position
 subplot(1,2,1);
@@ -75,7 +75,7 @@ title('Acceleration vs Time')
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
 legend('Platform', 'Deck')
-close all;
+% close all;
 disp(max(abs(p2dot))<p2dot_max)
 
 
