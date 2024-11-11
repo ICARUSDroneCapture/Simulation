@@ -5,6 +5,7 @@ figure(3)
 plot(t,a.d2dot(t), 'Color', [0.2 0.5 0.9 0.2])
 hold on
 
+%% Digital Signal Emulation
 
 sampling_rate = 10; %1 Hz
 time_step = 1/sampling_rate;
@@ -53,6 +54,8 @@ xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
 legend('Deck Acceleration')
 
+%% Modeling Platform Position Accounting for Error
+
 figure(4)
 
 a.error = accel_resolution + bias_instability;
@@ -91,6 +94,8 @@ ylabel('Acceleration (m/s^2)')
 legend('Platform (considering error)', 'Deck')
 disp(max(abs(p2dot))<p2dot_max)
 
+
+%% Calculating Max Error as a Function of Resolution
 
 figure(5)
 
@@ -263,7 +268,7 @@ sdot = zeros(3,1);
 sdot(1) = pdot;
 % Relative position control force
 f_pr = -(kp*(p-a.d(t)-a.pr_ref) + ki*pr_err_accum + kd*(pdot-a.ddot(t)));
-% Inertial Acceleration
+% Inertial Acceleration with error term
 sdot(2) = (-H*pdot + f_pr - a.m*a.g - G*a.error) / (a.m + G);
 % Error in relative position
 sdot(3) = pr_err;
