@@ -1,0 +1,82 @@
+close all; clear; clc;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%% Arm Parameters %%%%%%%%%%%%%%%%%%%%%%%
+
+a.m = 1;    % Mass [kg]
+a.g = 9.81; % Acceleration of gravity [m/s^2]
+a.pr_d = 0.5; % Desired relative position [m]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%% Environmental Model %%%%%%%%%%%%%%%%%%%%
+
+alpha = 0.4; % wave amplitdue [m]
+hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
+
+% Wave frequency
+Tmax = 7.5;    % Maximum period [s]
+k = 1;
+T = Tmax / k;  % Period of deck disturbance [s]
+beta = 2*pi/T; % wave frequency [rad/s]
+
+% Inertial Position, Velocity, and Acceleration of Deck
+a.d = @(t) alpha*sin(beta*t) + hdeck;      % [m]
+a.d_dot = @(t) beta*alpha*cos(beta*t);     % [m/s]
+a.d_ddot = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%% Control Gains %%%%%%%%%%%%%%%%%%%%%%%
+
+% Minimum Required Control Constants:
+%   a.ka = 2800; a.kv = ?; a.ks = ?;
+%   a.kp = 500; a.kd = 200; a.ki = 200;
+
+% Inertial Stabilization Control
+a.ka = 700;   % Acceleration Control [kg]
+a.kv = 5000;  % Velocity Control [kg/s]
+a.ks = 0;     % Position Control [kg*s^-2] 
+
+% Relative Position Control
+a.kp = 3000; % Proportional [kg*s^-2]
+a.kd = 500;  % Derivative [kg/s]    
+a.ki = 200;  % Integral [kg*s^-3] 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%% Control Gain Mixing %%%%%%%%%%%%%%%%%%%%
+
+%%%     See piecewiseTest.m for mixing visualization      %%%
+
+% If |pr-pr_d| <= r_g, apply full inertial stability control
+a.r_g = 0.4; % [m]
+
+% If |pr-pr_d| <= r_k, apply "h_k" proportion of relative position control
+a.r_k = 0.4; % [m]
+a.h_k = 0.0; % Proportion of applied relative position control
+
+% Proportion of applied inertial stabilitycontrol
+n = 1; % Polynomial order
+a.I = @(x) ...
+    ((-1/(1-(a.pr_d+a.r_g))^n) * ...
+        (sign(x-a.pr_d)*(x-(a.pr_d+sign(x-a.pr_d)*a.r_g)))^n + 1) * ...
+            (abs(x-a.pr_d)> a.r_g) ...
+    + 1 * (abs(x-a.pr_d) <= a.r_g);
+
+% Proportion of applied relative position control
+n = 1; % Polynomial order
+a.K = @(x) ...
+    (-((a.h_k-1)/(1-(a.pr_d+a.r_k))^n) * ...
+        (sign(x-a.pr_d)*(x-(a.pr_d+sign(x-a.pr_d)*a.r_k)))^n + a.h_k) *...
+            (abs(x-a.pr_d)> a.r_k) ...
+    + a.h_k * (abs(x-a.pr_d) <= a.r_k);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%% Performance Parameters %%%%%%%%%%%%%%%%%%%
+
+% Maximum acceleration metric
+p_ddot_max = 0.005*beta^2;
+
+% Settling time
+t_s = 2;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
