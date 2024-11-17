@@ -24,6 +24,9 @@ a.d = @(t) alpha*sin(beta*t) + hdeck;      % [m]
 a.d_dot = @(t) beta*alpha*cos(beta*t);     % [m/s]
 a.d_ddot = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
 
+a.a = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
+a.a_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1); % [rad]
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%% Control Gains %%%%%%%%%%%%%%%%%%%%%%%
 
