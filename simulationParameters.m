@@ -60,14 +60,18 @@ a.d_ddot = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
 %   a.kp = 300; a.kd = 50; a.ki = 100;
 
 % Inertial Stabilization Control
-a.ka = 700;  % Acceleration Control [kg]
-a.kv = 5000;  % Velocity Control [kg/s]
+a.ka = 100;  % Acceleration Control [kg]
+a.kv = 10;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2] 
 
 % Relative Position Control
-a.kp = 3000;  % Proportional [kg*s^-2]
-a.kd = 500;  % Derivative [kg/s]    
-a.ki = 200;  % Integral [kg*s^-3] 
+a.kp = 0;  % Proportional [kg*s^-2]
+a.kd = 0;  % Derivative [kg/s]    
+a.ki = 0;  % Integral [kg*s^-3]
+
+% Low-Pass filter on measured acceleration
+a.f_c = 100; % Cutoff frequency [Hz]
+a.omega = 2*pi*a.f_c; % Angular frequency [rad/s]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Control Gain Mixing %%%%%%%%%%%%%%%%%%%%

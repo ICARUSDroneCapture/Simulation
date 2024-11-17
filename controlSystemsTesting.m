@@ -6,13 +6,17 @@ simulationParameters;
 tspan = [0 20]; % [s]
 
 % Initial States
-p0 =  a.d(tspan(1))+a.pr_d; % Platform position [m]
-p_dot0 = a.d_dot(tspan(1)); % Platform velocity [m/s]
-pr_err_accum0 = 0;          % Integral of error in relative position [m*s]
-s0 = [p0; p_dot0; pr_err_accum0];
+p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
+p_dot0 = a.d_dot(tspan(1));   % Platform velocity [m/s]
+pr_err_accum0 = 0;            % Integral of relative position error [m*s]
+pm0 = p0;                     % Platform inetegrated position [m]
+pm_dot = p_dot0;              % Platform integrated velocity [m/s]
+pm_ddot = a.d_ddot(tspan(1)); % Platform measured acceleration [m*s^-2]
+
+s0 = [p0; p_dot0; pr_err_accum0; pm0; pm_dot; pm_ddot];
 
 % Running Simulation
-op = odeset('RelTol',1e-6,'AbsTol',1e-6); % Tolerance options
+op = odeset('RelTol',1e-3,'AbsTol',1e-6); % Tolerance options
 [t, s] = ode45(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
 
 % Plotting Position vs Time and Acceleration vs Time
@@ -105,45 +109,61 @@ function s_dot = rigidArmControl(t, s, a)
 p = s(1);
 p_dot = s(2);
 pr_err_accum = s(3);
+pm = s(4);
+pm_dot = s(5);
+pm_ddot = s(6);
 
 % Error in relative position (distance to center of operation region)
-pr = p-a.d(t);
+pr = pm-a.d(t);
 pr_err = pr-a.pr_d;
 
 % For testing gains without mixing proportions
-% ka = a.ka; % Acceleration [kg]
-% kv = a.kv; % Velocity     [kg/s]
-% ks = a.ks; % Position     [kg*s^-2]
-% kp = a.kp; % Proportional [kg*s^-2]
-% kd = a.kd; % Derivative   [kg/s]
-% ki = a.ki; % Integral     [kg*s^-3]
+ka = a.ka; % Acceleration [kg]
+kv = a.kv; % Velocity     [kg/s]
+ks = a.ks; % Position     [kg*s^-2]
+kp = a.kp; % Proportional [kg*s^-2]
+kd = a.kd; % Derivative   [kg/s]
+ki = a.ki; % Integral     [kg*s^-3]
 
 % Control gain proportions
 
-I = a.I(pr); % Proportion of inertial stability control to apply
-ka = a.ka*I; % Acceleration [kg]
-kv = a.kv*I; % Velocity     [kg/s]
-ks = a.ks*I; % Position     [kg*s^-2]
-
-k = a.K(pr); % Proportion of relative position control to apply
-kp = a.kp*k; % Proportional [kg*s^-2]
-kd = a.kd*k; % Derivative   [kg/s]
-ki = a.ki*k; % Integral     [kg*s^-3]
+% I = a.I(pr); % Proportion of inertial stability control to apply
+% ka = a.ka*I; % Acceleration [kg]
+% kv = a.kv*I; % Velocity     [kg/s]
+% ks = a.ks*I; % Position     [kg*s^-2]
+% 
+% k = a.K(pr); % Proportion of relative position control to apply
+% kp = a.kp*k; % Proportional [kg*s^-2]
+% kd = a.kd*k; % Derivative   [kg/s]
+% ki = a.ki*k; % Integral     [kg*s^-3]
 
 % Derivative of states
-s_dot = zeros(3,1);
+s_dot = zeros(6,1);
 
-% Inertial Velocity
-s_dot(1) = p_dot;
+% Derivative of position
+s_dot(1) = p_dot;  % inertial velocity
+s_dot(4) = pm_dot; % measured inertial velocity
 
+% Control Law
+
+% Inertial stability control force
+f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm);
 % Relative position control force
-f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(p_dot-a.d_dot(t)));
+f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(pm_dot-a.d_dot(t)));
 
-% Inertial Acceleration
-s_dot(2) = (-kv*p_dot - ks*p + f_pr) / (a.m + ka);
+% Platform EOM
+p_ddot = (f_i+f_pr) / a.m;
+
+% Derivative of velocity
+s_dot(2) = p_ddot; % Inertial acceleration
+s_dot(5) = pm_ddot; % Measured inertial acceleration
+
+% Derivative of measured inertial acceleration
+s_dot(6) = a.omega*(p_ddot - pm_ddot);
 
 % Error in relative position
 s_dot(3) = pr_err;
 
+t;
 
 end
