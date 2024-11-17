@@ -21,7 +21,7 @@ real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(b
 %   IMX-5: https://docs.inertialsense.com/datasheets/IMX-5_IMU_AHRS_GNSS-INS_Datasheet.pdf
 
 % Simulation time
-tspan = [0 200]; % [s]
+tspan = [0 300]; % [s]
 steps = 2000;
 timestep = tspan(1)/steps;
 t = linspace(0, tspan(2), steps);
@@ -271,57 +271,52 @@ for i = 1:(length(t)-1)
     measuredState = StatesOverTime_measured(i, :);
     time = t(i);
     error_compensation = compensateError(measuredState, constants, time);
-    errorValues(i, :) = error_compensation;
+    StatesOverTime_corrected(i, :) = error_compensation;
     accumError(i+1, :) = error_compensation + accumError(i, :);
-    StatesOverTime_corrected(i, :) = measuredState - error_compensation;
 end
 
 figure(7)
 
 subplot(1,2,1)
-% plot(t(2:end), StatesOverTime_corrected(:, 1))
-% hold on
 plot(t(2:end), StatesOverTime_measured(:, 1))
 hold on
-plot(t(2:end), errorValues(:, 1))
+plot(t(2:end), StatesOverTime_corrected(:, 1))
 hold on
 plot(t, real_accel(t))
 
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
 title('Drifting Accelerometer Signal')
-legend('Raw Measurement', 'Calculated Error', 'Expected Calculation')
-% legend('Corrected Measurement', 'Raw Measurement', 'Calculated Error', 'Expected Calculation')
+legend('Raw Measurement', 'Measurement Correction', 'Expected Calculation')
 
 
 subplot(1,2,2)
-% plot(t(2:end), StatesOverTime_corrected(:, 4))
-% hold on
 plot(t(2:end), StatesOverTime_measured(:, 4))
 hold on
-plot(t(2:end), errorValues(:, 4))
+plot(t(2:end), StatesOverTime_corrected(:, 4))
 hold on
 plot(t, real_ang_rate(t))
 
 xlabel('Time (s)')
 ylabel('Angular Velocity (deg/s)')
 title('Drifting Gyroscope Signal')
-legend('Raw Measurement', 'Calculated Error', 'Expected Calculation')
-% legend('Corrected Measurement', 'Raw Measurement', 'Calculated Error', 'Expected Calculation')
+legend('Raw Measurement', 'Measurement Correction', 'Expected Calculation')
 
-% figure(8)
-% 
-% subplot(1,2,1)
-% plot(t(2:end), errorValues(:, 1))
-% hold on
-% plot(t, accumError(:, 1))
-% legend('Error Values', 'Accumulated Error')
-% 
-% subplot(1,2,2)
-% plot(t(2:end), errorValues(:, 4))
-% hold on
-% plot(t, accumError(:, 4))
-% legend('Error Values', 'Accumulated Error')
+figure(8)
+
+subplot(1,2,1)
+plot(t(2:end), errorValues(:, 1))
+hold on
+plot(t, accumError(:, 1))
+legend('Error Values', 'Accumulated Error')
+
+subplot(1,2,2)
+plot(t(2:end), errorValues(:, 4))
+hold on
+plot(t, accumError(:, 4))
+legend('Error Values', 'Accumulated Error')
+
+close(figure(8))
 
 function state = compensateError(measuredState, constants, time)
     k = constants.k;
