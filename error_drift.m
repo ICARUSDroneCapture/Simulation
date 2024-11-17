@@ -21,7 +21,7 @@ real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(b
 %   IMX-5: https://docs.inertialsense.com/datasheets/IMX-5_IMU_AHRS_GNSS-INS_Datasheet.pdf
 
 % Simulation time
-tspan = [0 40]; % [s]
+tspan = [0 200]; % [s]
 steps = 2000;
 timestep = tspan(1)/steps;
 t = linspace(0, tspan(2), steps);
@@ -31,9 +31,9 @@ dk = 0.02; % Scale Factor Nonlinearity, %FS
 V_err_0 = 0; % Initial Velocity Error
 P_err_0 = 0; % Initial Position Error
 
-accel_resolution = 0.122 / 1000 * 9.8; % m/s
+accel_resolution = 0.122 / 1000 * a.g; % m/s
 accel_samplingRate = 4000; % Hz
-accel_noiseDensity = 60 * 10^-6 * 9.8; % m/s^2/sqrt(Hz)
+accel_noiseDensity = 60 * 10^-6 * a.g; % m/s^2/sqrt(Hz)
 
 gyro_resolution = 0.0076; % deg/s
 gyro_samplingRate = 8000; % Hz
@@ -49,6 +49,8 @@ ARW = 0.16 / 60; % Angle Random Walk (deg/sqrt(s))
 
 % b_a = 0;
 % b_g = 0;
+% VRW = 0;
+% ARW = 0;
 
 % Velocity Error
 V_err = @(t, real_accel) V_err_0 + k*(real_accel(t) * timestep) + b_a*t + VRW*sqrt(t) + a.g*(0.5*b_g*t.^2 + 2/3*ARW*t.^(3/2));
@@ -210,13 +212,14 @@ legend('Drifting Gyro Measurements','Real Gyro Measurements')
 figure(6)
 
 quant_noise_accel = @(t, i, real_accel) accel_quantized(t, real_accel) + accel_randomNoise(i)';
+
 drift_error_accel_vert = @(t, n_a, real_accel, theta_err, i) (1 + k)*quant_noise_accel(t, i, real_accel) + b_a + n_a(t) + a.g*(1-cos(theta_err(t)));
 % drift_error_accel_horz = @(t, n_a, real_accel, theta_err, i) (1 + k)*quant_noise_accel(t, i, real_accel) + b_a + n_a(t) + a.g*sin(theta_err(t));
 accel_measured_vert = @(t, n_a, real_accel, theta_err, i) drift_error_accel_vert(t, n_a, real_accel, theta_err, i);
 % accel_measured_horz = @(t, n_a, real_accel, theta_err, i) drift_error_accel_horz(t, n_a, real_accel, theta_err, i);
 
 quant_noise_gyro = @(t, i, real_ang_rate) gyro_quantized(t, real_ang_rate) + gyro_randomNoise(i)';
-drift_error_gyro = @(t, n_g, real_ang_rate, theta_err, i) (1 + k)*quant_noise_gyro(t, i, real_ang_rate) + b_g + n_g(t) + a.g*(1-cos(theta_err(t)));
+drift_error_gyro = @(t, n_g, real_ang_rate, theta_err, i) (1 + k)*quant_noise_gyro(t, i, real_ang_rate) + b_g + n_g(t);
 gyro_measured = @(t, n_g, real_ang_rate, theta_err, i) drift_error_gyro(t, n_g, real_ang_rate, theta_err, i);
 
 subplot(1,2,1)
@@ -249,61 +252,87 @@ StatesOverTime_measured(1,:) = [];
 
 %% Error Compensation
 
-
-
 StatesOverTime_corrected = zeros(length(t)-1, 6);
 
 constants.k = k;
 constants.dk = dk;
 constants.b_a = b_a;
 constants.b_g = b_g;
+constants.ARW = ARW;
+constants.VRW = VRW;
 constants.accel_noiseDensity = accel_noiseDensity;
 constants.gyro_noiseDensity = gyro_noiseDensity;
+constants.g = a.g;
 
-accumError = zeros(1,6);
+errorValues = zeros(length(t)-1, 6);
+accumError = zeros(length(t), 6);
 
 for i = 1:(length(t)-1)
     measuredState = StatesOverTime_measured(i, :);
-    error_compensation = compensateError(measuredState, constants);
-    accumError = accumError + error_compensation;
-    StatesOverTime_corrected(i, :) = measuredState + accumError;
+    time = t(i);
+    error_compensation = compensateError(measuredState, constants, time);
+    errorValues(i, :) = error_compensation;
+    accumError(i+1, :) = error_compensation + accumError(i, :);
+    StatesOverTime_corrected(i, :) = measuredState - error_compensation;
 end
 
 figure(7)
 
 subplot(1,2,1)
-plot(t(2:end), StatesOverTime_corrected(:, 1))
-hold on
+% plot(t(2:end), StatesOverTime_corrected(:, 1))
+% hold on
 plot(t(2:end), StatesOverTime_measured(:, 1))
+hold on
+plot(t(2:end), errorValues(:, 1))
 hold on
 plot(t, real_accel(t))
 
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
 title('Drifting Accelerometer Signal')
-legend('Raw Measurement', 'Corrected Measurement', 'Expected Calculation')
+legend('Raw Measurement', 'Calculated Error', 'Expected Calculation')
+% legend('Corrected Measurement', 'Raw Measurement', 'Calculated Error', 'Expected Calculation')
 
 
 subplot(1,2,2)
-plot(t(2:end), StatesOverTime_corrected(:, 4))
-hold on
+% plot(t(2:end), StatesOverTime_corrected(:, 4))
+% hold on
 plot(t(2:end), StatesOverTime_measured(:, 4))
+hold on
+plot(t(2:end), errorValues(:, 4))
 hold on
 plot(t, real_ang_rate(t))
 
 xlabel('Time (s)')
 ylabel('Angular Velocity (deg/s)')
 title('Drifting Gyroscope Signal')
-legend('Raw Measurement', 'Corrected Measurement', 'Expected Calculation')
+legend('Raw Measurement', 'Calculated Error', 'Expected Calculation')
+% legend('Corrected Measurement', 'Raw Measurement', 'Calculated Error', 'Expected Calculation')
 
+% figure(8)
+% 
+% subplot(1,2,1)
+% plot(t(2:end), errorValues(:, 1))
+% hold on
+% plot(t, accumError(:, 1))
+% legend('Error Values', 'Accumulated Error')
+% 
+% subplot(1,2,2)
+% plot(t(2:end), errorValues(:, 4))
+% hold on
+% plot(t, accumError(:, 4))
+% legend('Error Values', 'Accumulated Error')
 
-function state = compensateError(measuredState, constants)
+function state = compensateError(measuredState, constants, time)
     k = constants.k;
     dk = constants.dk;
     b_a = constants.b_a;
     b_g = constants.b_g;
+    ARW = constants.ARW;
+    VRW = constants.VRW;
     accel_noiseDensity = constants.accel_noiseDensity;
     gyro_noiseDensity = constants.gyro_noiseDensity;
+    g = constants.g;
     
     measured_accel = measuredState(1:3)';
     measured_gyro = measuredState(4:6)';
@@ -342,24 +371,26 @@ function state = compensateError(measuredState, constants)
     ACCEL_NOISE = [accel_noiseDensity accel_noiseDensity accel_noiseDensity]';
     GYRO_NOISE = [gyro_noiseDensity gyro_noiseDensity gyro_noiseDensity]';
 
-    a_adjusted = measured_accel - ACCEL_BIAS;
+    theta_err = b_g*time + ARW*sqrt(time);
+
+    a_adjusted = measured_accel - ACCEL_BIAS - ACCEL_NOISE - g*(1-cos(theta_err));
     
     A_FIX = inv([1+S_x+dS_x  M_xy       M_xz
                 M_yx         1+S_y+dS_y M_yz
-                M_zx         M_zy       1+S_z+S_z]);
+                M_zx         M_zy       1+S_z+dS_z]);
 
     corrected_a = A_FIX * a_adjusted;
 
-    state(1:3) = corrected_a';
 
     G_DEP_BIAS = [B_gx  0     0
                   0     B_gy  0
                   0     0     B_gz];
 
-    g_adjusted = measured_gyro - GYRO_BIAS - G_DEP_BIAS*corrected_a;
+    g_adjusted = measured_gyro - GYRO_BIAS - GYRO_NOISE - G_DEP_BIAS*corrected_a;
     
     corrected_g = A_FIX * g_adjusted;
 
+    state(1:3) = corrected_a';
     state(4:6) = corrected_g';
     
 end
