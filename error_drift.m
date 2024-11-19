@@ -21,7 +21,7 @@ real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(b
 %   IMX-5: https://docs.inertialsense.com/datasheets/IMX-5_IMU_AHRS_GNSS-INS_Datasheet.pdf
 
 % Simulation time
-tspan = [0 40]; % [s]
+tspan = [0 10]; % [s]
 steps = 2000;
 timestep = tspan(1)/steps;
 t = linspace(0, tspan(2), steps);
@@ -46,11 +46,6 @@ VRW = 0.02 / 60; % Velocity Random Walk (m/s/sqrt(s))
 % Gyro Specs
 b_g = 1.5 / 3600; % Time Varying Bias (deg/s)
 ARW = 0.16 / 60; % Angle Random Walk (deg/sqrt(s))
-
-% b_a = 0;
-% b_g = 0;
-% VRW = 0;
-% ARW = 0;
 
 % Velocity Error
 V_err = @(t, real_accel) V_err_0 + k*(real_accel(t) * timestep) + b_a*t + VRW*sqrt(t) + a.g*(0.5*b_g*t.^2 + 2/3*ARW*t.^(3/2));
@@ -286,22 +281,22 @@ constants.gyro_noiseDensity = gyro_noiseDensity;
 constants.g = a.g;
 
 errorValues = zeros(length(t)-1, 6);
-accumError = zeros(length(t), 6);
 
 for iter = 1:(length(t)-1)
     measuredState = StatesOverTime_measured(iter, :);
     time = t(iter);
     error_compensation = compensateError(measuredState, constants, time);
     StatesOverTime_corrected(iter, :) = error_compensation;
-    accumError(iter+1, :) = error_compensation + accumError(iter, :);
 end
+
+t = t(2:end);
 
 figure(9)
 
 subplot(1,2,1)
-plot(t(2:end), StatesOverTime_measured(:, 1))
+plot(t, StatesOverTime_measured(:, 1))
 hold on
-plot(t(2:end), StatesOverTime_corrected(:, 1))
+plot(t, StatesOverTime_corrected(:, 1))
 hold on
 plot(t, real_accel(t), color='black', LineWidth=1)
 
@@ -312,9 +307,9 @@ legend('Raw Measurement', 'Measurement Correction', 'Expected Calculation')
 
 
 subplot(1,2,2)
-plot(t(2:end), StatesOverTime_measured(:, 4))
+plot(t, StatesOverTime_measured(:, 4))
 hold on
-plot(t(2:end), StatesOverTime_corrected(:, 4))
+plot(t, StatesOverTime_corrected(:, 4))
 hold on
 plot(t, real_ang_rate(t), color='black', LineWidth=1)
 
@@ -323,55 +318,50 @@ ylabel('Angular Velocity (deg/s)')
 title('Drifting Gyroscope Signal')
 legend('Raw Measurement', 'Measurement Correction', 'Expected Calculation')
 
-figure(10)
+%% Finding Accuracy of Corrected Data
 
-subplot(1,2,1)
-plot(t(2:end), errorValues(:, 1))
-hold on
-plot(t, accumError(:, 1))
-legend('Error Values', 'Accumulated Error')
-
-subplot(1,2,2)
-plot(t(2:end), errorValues(:, 4))
-hold on
-plot(t, accumError(:, 4))
-legend('Error Values', 'Accumulated Error')
-
-close(figure(10))
+real_accel_data = real_accel(t)';
+real_gyro_data = real_ang_rate(t)';
 
 figure(11)
 
 constants.beta = beta;
-fitSolutionAccel = LeastSquares(t(2:end)', StatesOverTime_corrected(:, 1), constants);
-fitSolutionGyro = LeastSquares(t(2:end)', StatesOverTime_corrected(:, 4), constants);
+fitSolutionAccel = LeastSquares(t', StatesOverTime_corrected(:, 1), constants);
+fitSolutionGyro = LeastSquares(t', StatesOverTime_corrected(:, 4), constants);
+
+error_accel = abs(fitSolutionAccel - real_accel_data);
+error_gyro = abs(fitSolutionGyro - real_gyro_data);
 
 subplot(1,2,1)
-plot(t(2:end), fitSolutionAccel)
+plot(t, fitSolutionAccel, color='red')
 hold on
 plot(t, real_accel(t), color='black', LineWidth=0.5)
+hold on
+plot(t, error_accel)
 
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
 title('Fit Curve vs Real Curve - Accelerometer')
-legend('Fit Line Accel', 'Expected Accel Data')
+legend('Fit Line Accel', 'Expected Accel Data', 'Error')
 
 subplot(1,2,2)
-plot(t(2:end), fitSolutionGyro)
+plot(t, fitSolutionGyro, color='red')
 hold on
 plot(t, real_ang_rate(t), color='black', LineWidth=0.5)
+hold on
+plot(t, error_gyro)
 
 xlabel('Time (s)')
 ylabel('Angular Velocity (deg/s)')
 title('Fit Curve vs Real Curve - Gyroscope')
-legend('Fit Line Gyro', 'Expected Gyro Data')
+legend('Fit Line Gyro', 'Expected Gyro Data', 'Error')
 
 figure(12)
 
-error_accel = abs(fitSolutionAccel - StatesOverTime_corrected(:, 1));
-error_gyro = abs(fitSolutionGyro - StatesOverTime_corrected(:, 4));
+sz = 3;
 
 subplot(1,2,1)
-plot(t(2:end), error_accel)
+scatter(t, error_accel, sz, "filled")
 
 xlabel('Time (s)')
 ylabel("Error (m/s^2)")
@@ -379,29 +369,120 @@ title('Accelerometer Error Over Time')
 ylim([0 0.15])
 
 subplot(1,2,2)
-plot(t(2:end), error_gyro)
+scatter(t, error_gyro, sz, "filled")
 
 xlabel('Time (s)')
 ylabel("Error (deg/s)")
 title('Gyroscope Error Over Time')
 ylim([0 2])
 
+%% Finding Accuracy
+
+accel_accuracy = 100*(1-min(abs(error_accel), abs(real_accel_data)) ./ max(abs(error_accel), abs(real_accel_data)));
+gyro_accuracy = 100*(1-min(abs(error_gyro), abs(real_gyro_data)) ./ max(abs(error_gyro), abs(real_gyro_data)));
+
+fitAccelAccuracy = LeastSquares(t', accel_accuracy, constants);
+fitGyroAccuracy = LeastSquares(t', gyro_accuracy, constants);
+
+AccelAccuracy = mean(fitAccelAccuracy);
+GyroAccuracy = mean(fitGyroAccuracy);
+
+figure(13)
+
+subplot(1,2,1)
+plot(t, accel_accuracy)
+hold on
+plot(t, fitAccelAccuracy)
+xlabel("Time (s)")
+ylabel("Accuracy (%)")
+title("Accelerometer Accuracy (with correction)")
+legend("Correction Accuracy", append("General Accuracy of ", num2str(AccelAccuracy),"%"))
+
+subplot(1,2,2)
+plot(t, gyro_accuracy)
+hold on
+plot(t, fitGyroAccuracy)
+xlabel("Time (s)")
+ylabel("Accuracy (%)")
+title("Gyroscope Accuracy (with correction)")
+legend("Correction Accuracy", append("General Accuracy of ", num2str(GyroAccuracy),"%"))
+
+figure(14)
+
+subplot(1,2,1)
+yyaxis left
+plot(t, accel_accuracy)
+hold on
+plot(t, fitAccelAccuracy, color="black")
+hold on
+xlabel("Time (s)")
+ylabel("Accuracy (%)")
+title("Accelerometer Accuracy (with correction)")
+
+yyaxis right
+plot(t, real_accel(t))
+ylim([-0.4 0.4])
+ylabel('Deck Disturbance Acceleration (m*s^-2)')
+legend("Correction Accuracy", append("General Accuracy of ", num2str(AccelAccuracy),"%"), "Deck Disturbance")
+
+subplot(1,2,2)
+yyaxis left
+plot(t, gyro_accuracy)
+hold on
+plot(t, fitGyroAccuracy, color="black")
+hold on
+xlabel("Time (s)")
+ylabel("Accuracy (%)")
+title("Gyroscope Accuracy (with correction)")
+
+yyaxis right
+plot(t, real_ang_rate(t))
+ylim([-25 25])
+ylabel('Deck Disturbance Angular Rate (deg/s)')
+legend("Correction Accuracy", append("General Accuracy of ", num2str(GyroAccuracy),"%"), "Deck Disturbance")
 
 %% Find new position/velocity error from acceleration error
 
-% figure(13)
-% 
-% subplot(1,3,1)
-% plot(t, V_err_corrected)
-% xlabel("Time (s)")
-% ylabel("Velocity Error (m/s)")
-% title("New Velocity Error over Time (with correction)")
-% 
-% subplot(1,3,2)
-% plot(t, P_err_corrected)
-% xlabel("Time (s)")
-% ylabel("Position Error (m)")
-% title("New Position Error over Time (with correction)")
+accel_reduction = (100 - AccelAccuracy)/100;
+gyro_reduction = (100 - GyroAccuracy)/100;
+
+b_a_red = accel_reduction*b_a;
+b_g_red = gyro_reduction*b_g;
+k_red = accel_reduction*k;
+VRW_red = accel_reduction*VRW;
+ARW_red = gyro_reduction*ARW;
+
+% Velocity Error
+V_err_corrected = @(t, real_accel) V_err_0 + k_red*(real_accel(t) * timestep) + b_a_red*t + VRW_red*sqrt(t) + a.g*(0.5*b_g_red*t.^2 + 2/3*ARW_red*t.^(3/2));
+
+% Position Error
+P_err_corrected = @(t, real_vel) P_err_0 + k_red*(real_vel(t) * timestep) + V_err_0*t + 0.5*b_a_red*t.^2 + 2/3*VRW_red*t.^(3/2) + a.g*(1/6*b_g_red*t.^3 + 4/15*ARW_red*t.^(5/2));
+
+% Angular Error
+theta_err_corrected = @(t) b_g_red*t + ARW_red*sqrt(t);
+
+figure(15)
+
+subplot(1,3,1)
+plot(t, V_err_corrected(t, real_accel))
+xlabel("Time (s)")
+ylabel("Velocity Error (m/s)")
+title("Velocity Error over Time")
+
+subplot(1,3,2)
+plot(t, P_err_corrected(t, real_vel))
+xlabel("Time (s)")
+ylabel("Position Error (m)")
+title("Position Error over Time")
+
+
+subplot(1,3,3)
+plot(t, theta_err_corrected(t))
+xlabel("Time (s)")
+ylabel("Angular Error (deg)")
+title("Angular Error over Time")
+
+%% Functions
 
 function state = compensateError(measuredState, constants, time)
     k = constants.k;
@@ -454,7 +535,7 @@ function state = compensateError(measuredState, constants, time)
     theta_err = b_g*time + ARW*sqrt(time);
 
     % a_adjusted = measured_accel - ACCEL_BIAS - ACCEL_NOISE - g*(1-cos(theta_err));
-    a_adjusted = measured_accel - ACCEL_BIAS - ACCEL_NOISE - g*sin(theta_err);
+    a_adjusted = measured_accel - ACCEL_BIAS - g*sin(theta_err);
 
     
     A_FIX = inv([1+S_x+dS_x  M_xy       M_xz
@@ -468,7 +549,7 @@ function state = compensateError(measuredState, constants, time)
                   0     B_gy  0
                   0     0     B_gz];
 
-    g_adjusted = measured_gyro - GYRO_BIAS - GYRO_NOISE - G_DEP_BIAS*corrected_a;
+    g_adjusted = measured_gyro - GYRO_BIAS - G_DEP_BIAS*corrected_a;
     
     corrected_g = A_FIX * g_adjusted;
 
