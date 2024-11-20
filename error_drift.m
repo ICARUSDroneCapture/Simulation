@@ -21,31 +21,13 @@ real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(b
 %   IMX-5: https://docs.inertialsense.com/datasheets/IMX-5_IMU_AHRS_GNSS-INS_Datasheet.pdf
 
 % Simulation time
-tspan = [0 3*60]; % [s]
+tspan = [0 10]; % [s]
 steps = 2000;
 timestep = tspan(1)/steps;
 t = linspace(0, tspan(2), steps);
 
-k = 0.1; % Scale Factor Error, measured as percentage FSR
-dk = 0.02; % Scale Factor Nonlinearity, %FS
-V_err_0 = 0; % Initial Velocity Error
-P_err_0 = 0; % Initial Position Error
-
-accel_resolution = 0.122 / 1000 * a.g; % m/s
-accel_samplingRate = 4000; % Hz
-accel_noiseDensity = 60 * 10^-6 * a.g; % m/s^2/sqrt(Hz)
-
-gyro_resolution = 0.0076; % deg/s
-gyro_samplingRate = 8000; % Hz
-gyro_noiseDensity = 5 * 10^-3; % dps/sqrt(Hz)
-
-% Accel Specs
-b_a = 0.019; % Time Varying Bias (mg)
-VRW = 0.02 / 60; % Velocity Random Walk (m/s/sqrt(s))
-
-% Gyro Specs
-b_g = 1.5 / 3600; % Time Varying Bias (deg/s)
-ARW = 0.16 / 60; % Angle Random Walk (deg/sqrt(s))
+% imx_5_specs
+gx5_specs
 
 % Velocity Error
 V_err = @(t, real_accel) V_err_0 + k*(real_accel(t) * timestep) + b_a*t + VRW*sqrt(t) + a.g*(0.5*b_g*t.^2 + 2/3*ARW*t.^(3/2));
@@ -381,6 +363,9 @@ ylim([0 2])
 accel_accuracy = 100*(1-min(abs(error_accel), abs(real_accel_data)) ./ max(abs(error_accel), abs(real_accel_data)));
 gyro_accuracy = 100*(1-min(abs(error_gyro), abs(real_gyro_data)) ./ max(abs(error_gyro), abs(real_gyro_data)));
 
+accel_LSB = error_accel / accel_resolution;
+gyro_LSB = error_gyro / gyro_resolution;
+
 fitAccelAccuracy = LeastSquares(t', accel_accuracy, constants);
 fitGyroAccuracy = LeastSquares(t', gyro_accuracy, constants);
 
@@ -441,6 +426,35 @@ ylim([-25 25])
 ylabel('Deck Disturbance Angular Rate (deg/s)')
 legend("Correction Accuracy", append("General Accuracy of ", num2str(GyroAccuracy),"%"), "Deck Disturbance")
 
+
+figure(15)
+
+subplot(1,2,1)
+yyaxis left
+plot(t, accel_LSB)
+hold on
+xlabel("Time (s)")
+ylabel("Accuracy (%)")
+title("Number of Acceleration Bits of Error (with correction)")
+
+yyaxis right
+plot(t, real_accel(t))
+ylim([-0.4 0.4])
+ylabel('Deck Disturbance Acceleration (m*s^-2)')
+
+subplot(1,2,2)
+yyaxis left
+plot(t, gyro_LSB)
+hold on
+xlabel("Time (s)")
+ylabel("Accuracy (%)")
+title("Number of Gyroscope Bits of Error (with correction)")
+
+yyaxis right
+plot(t, real_ang_rate(t))
+ylim([-25 25])
+ylabel('Deck Disturbance Angular Rate (deg/s)')
+
 %% Find new position/velocity error from acceleration error
 
 accel_reduction = (100 - AccelAccuracy)/100;
@@ -461,7 +475,7 @@ P_err_corrected = @(t, real_vel) P_err_0 + k_red*(real_vel(t) * timestep) + V_er
 % Angular Error
 theta_err_corrected = @(t) b_g_red*t + ARW_red*sqrt(t);
 
-figure(15)
+figure(16)
 
 subplot(1,3,1)
 plot(t, V_err_corrected(t, real_accel))
