@@ -1,9 +1,11 @@
 close all; clear; clc;
 
+set(0, 'DefaultLineLineWidth', 1);
+
 simulationParameters;
 
 % Simulation time
-tspan = [0 20]; % [s]
+tspan = [0 200]; % [s]
 
 % Initial States
 p0 =  a.d(tspan(1))+a.pr_d; % Platform position [m]
@@ -12,15 +14,13 @@ pr_err_accum0 = 0;          % Integral of error in relative position [m*s]
 s0 = [p0; p_dot0; pr_err_accum0];
 
 % Running Simulation
-op = odeset('RelTol',1e-6,'AbsTol',1e-6); % Tolerance options
+op = odeset('RelTol',1e-12,'AbsTol',1e-12); % Tolerance options
 [t, s] = ode45(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
 
 % Plotting Position vs Time and Acceleration vs Time
-figure;
-sgtitle('Non-Zero Relative Positon Control during Inertial Control')
 
 % Position
-subplot(1,3,1);
+figure;
 plot(t,s(:,1))
 hold on
 plot(t,a.d(t))
@@ -29,18 +29,18 @@ xlabel('Time (s)')
 ylabel('Position (m)')
 legend('Platform', 'Deck','Location','southeast')
 
-% Position
-subplot(1,3,2);
-plot(t,s(:,2))
-hold on
-plot(t,a.d_dot(t))
-title('Inertial Velocity vs Time')
-xlabel('Time (s)')
-ylabel('Velocity (m/s)')
-legend('Platform', 'Deck','Location','southeast')
+% Velocity
+% figure;
+% plot(t,s(:,2))
+% hold on
+% plot(t,a.d_dot(t))
+% title('Inertial Velocity vs Time')
+% xlabel('Time (s)')
+% ylabel('Velocity (m/s)')
+% legend('Platform', 'Deck','Location','southeast')
 
 % Acceleration
-subplot(1,3,3);
+figure;
 % Feeding states back through EOM to calculating inertial acceleration of
 % the platfor
 p_ddot = zeros(size(t));
@@ -53,6 +53,7 @@ hold on
 plot(t,a.d_ddot(t))
 yline(p_ddot_max,'--')
 yline(-p_ddot_max,'--')
+ylim([min(a.d_ddot(t))*1.25 max(a.d_ddot(t))*1.25])
 title('Inertial Acceleration vs Time')
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
@@ -101,6 +102,16 @@ function s_dot = rigidArmControl(t, s, a)
 %                  acceleration of the platform,and pr_err is the error in 
 %                  the relative position of the platform
 
+persistent f_comp
+
+% Compensation force to account for interfering control forces
+% (When control forces cause non-zero steady state velocity with zero
+% acceleration)
+if (t == 0)
+    f_comp = a.m_avg*a.g;
+    % f_comp = 0;
+end
+
 % Current states
 p = s(1);
 p_dot = s(2);
@@ -140,7 +151,11 @@ s_dot(1) = p_dot;
 f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(p_dot-a.d_dot(t)));
 
 % Inertial Acceleration
-s_dot(2) = (-kv*p_dot - ks*p + f_pr) / (a.m + ka);
+s_dot(2) = (-kv*p_dot - ks*p + f_pr - a.m*a.g + f_comp) / (a.m + ka);
+
+if (abs(s_dot(2)) < 1e-8 && p_dot > 1e-8 && I == 1)
+    f_comp = kv*p_dot;
+end
 
 % Error in relative position
 s_dot(3) = pr_err;
