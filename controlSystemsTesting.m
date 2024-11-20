@@ -3,7 +3,7 @@ close all; clear; clc;
 simulationParameters;
 
 % Simulation time
-tspan = [0 200]; % [s]
+tspan = [0 20]; % [s]
 
 % Initial States
 p0 =  a.d(tspan(1))+a.pr_d; % Platform position [m]
@@ -12,7 +12,7 @@ pr_err_accum0 = 0;          % Integral of error in relative position [m*s]
 s0 = [p0; p_dot0; pr_err_accum0];
 
 % Running Simulation
-op = odeset('RelTol',1e-12,'AbsTol',1e-12); % Tolerance options
+op = odeset('RelTol',1e-6,'AbsTol',1e-6); % Tolerance options
 [t, s] = ode45(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
 
 % Plotting Position vs Time and Acceleration vs Time
@@ -20,7 +20,7 @@ figure;
 sgtitle('Non-Zero Relative Positon Control during Inertial Control')
 
 % Position
-subplot(1,2,1);
+subplot(1,3,1);
 plot(t,s(:,1))
 hold on
 plot(t,a.d(t))
@@ -29,8 +29,18 @@ xlabel('Time (s)')
 ylabel('Position (m)')
 legend('Platform', 'Deck','Location','southeast')
 
+% Position
+subplot(1,3,2);
+plot(t,s(:,2))
+hold on
+plot(t,a.d_dot(t))
+title('Inertial Velocity vs Time')
+xlabel('Time (s)')
+ylabel('Velocity (m/s)')
+legend('Platform', 'Deck','Location','southeast')
+
 % Acceleration
-subplot(1,2,2);
+subplot(1,3,3);
 % Feeding states back through EOM to calculating inertial acceleration of
 % the platfor
 p_ddot = zeros(size(t));
@@ -56,21 +66,18 @@ hold on
 % Plotting inertial control region
 x = [tspan, flip(tspan)];
 yf = [a.pr_d-a.r_g, a.pr_d-a.r_g, a.pr_d+a.r_g, a.pr_d+a.r_g];
-% yta = [a.pr_d+a.r_g, a.pr_d+a.r_g, 1, 1];
-% ytb = [0, 0, a.pr_d-a.r_g, a.pr_d-a.r_g];
 fill(x,yf,'y','FaceAlpha',0.2,'EdgeColor','none')
-% fill(x,yta,'g','FaceAlpha',0.2,'EdgeColor','none')
-% fill(x,ytb,'g','FaceAlpha',0.2,'EdgeColor','none')
 % Plotting Relative position control region
 x = [tspan, flip(tspan)];
 yta = [a.pr_d+a.r_k, a.pr_d+a.r_k, 1, 1];
 ytb = [0, 0, a.pr_d-a.r_k, a.pr_d-a.r_k];
 fill(x,yta,'b','FaceAlpha',0.2,'EdgeColor','none')
 fill(x,ytb,'b','FaceAlpha',0.2,'EdgeColor','none')
+yline(a.pr_d,'--','Label','$p_{rd}$','Interpreter','latex','FontSize',15)
 title('Relative Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
-legend('','Full Inertial','Transitional Relative Position','')
+legend('','Full Inertial','Relative Position','')
 
 
 function s_dot = rigidArmControl(t, s, a)
@@ -100,7 +107,7 @@ p_dot = s(2);
 pr_err_accum = s(3);
 
 % Error in relative position (distance to center of operation region)
-pr = s(1)-a.d(t);
+pr = p-a.d(t);
 pr_err = pr-a.pr_d;
 
 % For testing gains without mixing proportions
@@ -130,12 +137,13 @@ s_dot = zeros(3,1);
 s_dot(1) = p_dot;
 
 % Relative position control force
-f_pr = -(kp*(p-a.d(t)-a.pr_d) + ki*pr_err_accum + kd*(p_dot-a.d_dot(t)));
+f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(p_dot-a.d_dot(t)));
 
 % Inertial Acceleration
-s_dot(2) = (-kv*p_dot + f_pr - a.m*a.g) / (a.m + ka);
+s_dot(2) = (-kv*p_dot - ks*p + f_pr) / (a.m + ka);
 
 % Error in relative position
 s_dot(3) = pr_err;
+
 
 end
