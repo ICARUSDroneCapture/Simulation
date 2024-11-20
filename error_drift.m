@@ -21,7 +21,7 @@ real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(b
 %   IMX-5: https://docs.inertialsense.com/datasheets/IMX-5_IMU_AHRS_GNSS-INS_Datasheet.pdf
 
 % Simulation time
-tspan = [0 10]; % [s]
+tspan = [0 3*60]; % [s]
 steps = 2000;
 timestep = tspan(1)/steps;
 t = linspace(0, tspan(2), steps);
@@ -467,20 +467,20 @@ subplot(1,3,1)
 plot(t, V_err_corrected(t, real_accel))
 xlabel("Time (s)")
 ylabel("Velocity Error (m/s)")
-title("Velocity Error over Time")
+title("Velocity Error over Time (corrected)")
 
 subplot(1,3,2)
 plot(t, P_err_corrected(t, real_vel))
 xlabel("Time (s)")
 ylabel("Position Error (m)")
-title("Position Error over Time")
+title("Position Error over Time (corrected)")
 
 
 subplot(1,3,3)
 plot(t, theta_err_corrected(t))
 xlabel("Time (s)")
 ylabel("Angular Error (deg)")
-title("Angular Error over Time")
+title("Angular Error over Time (corrected)")
 
 %% Functions
 
