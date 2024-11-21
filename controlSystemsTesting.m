@@ -102,15 +102,10 @@ function s_dot = rigidArmControl(t, s, a)
 %                  acceleration of the platform,and pr_err is the error in 
 %                  the relative position of the platform
 
-persistent f_comp
-
 % Compensation force to account for interfering control forces
 % (When control forces cause non-zero steady state velocity with zero
 % acceleration)
-if (t == 0)
-    f_comp = a.m_avg*a.g;
-    % f_comp = 0;
-end
+global f_comp
 
 % Current states
 p = s(1);
@@ -154,7 +149,7 @@ f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(p_dot-a.d_dot(t)));
 s_dot(2) = (-kv*p_dot - ks*p + f_pr - a.m*a.g + f_comp) / (a.m + ka);
 
 if (abs(s_dot(2)) < 1e-8 && p_dot > 1e-8 && I == 1)
-    f_comp = kv*p_dot;
+    f_comp = -kv*p_dot + f_comp;
 end
 
 % Error in relative position

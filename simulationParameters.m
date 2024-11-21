@@ -4,8 +4,9 @@ close all; clear; clc;
 %%%%%%%%%%%%%%%%%%%%%% Arm Parameters %%%%%%%%%%%%%%%%%%%%%%%
 
 a.m = 1;    % Mass [kg]
-a.m_avg = 5; % Gravity compensation force mass [kg]
 a.g = 9.81; % Acceleration of gravity [m/s^2]
+global f_comp
+f_comp = 5*a.g; % Gravity compensation force mass [N]
 a.pr_d = 0.5; % Desired relative position [m]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
