@@ -5,7 +5,7 @@ set(0, 'DefaultLineLineWidth', 1);
 simulationParameters;
 
 % Simulation time
-tspan = [0 200]; % [s]
+tspan = [0 30]; % [s]
 
 % Initial States
 p0 =  a.d(tspan(1))+a.pr_d; % Platform position [m]
@@ -30,14 +30,14 @@ ylabel('Position (m)')
 legend('Platform', 'Deck','Location','southeast')
 
 % Velocity
-% figure;
-% plot(t,s(:,2))
-% hold on
-% plot(t,a.d_dot(t))
-% title('Inertial Velocity vs Time')
-% xlabel('Time (s)')
-% ylabel('Velocity (m/s)')
-% legend('Platform', 'Deck','Location','southeast')
+figure;
+plot(t,s(:,2))
+hold on
+plot(t,a.d_dot(t))
+title('Inertial Velocity vs Time')
+xlabel('Time (s)')
+ylabel('Velocity (m/s)')
+legend('Platform', 'Deck','Location','southeast')
 
 % Acceleration
 figure;
@@ -53,7 +53,7 @@ hold on
 plot(t,a.d_ddot(t))
 yline(p_ddot_max,'--')
 yline(-p_ddot_max,'--')
-ylim([min(a.d_ddot(t))*1.25 max(a.d_ddot(t))*1.25])
+% ylim([min(a.d_ddot(t))*1.25 max(a.d_ddot(t))*1.25])
 title('Inertial Acceleration vs Time')
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
@@ -117,6 +117,7 @@ pr = p-a.d(t);
 pr_err = pr-a.pr_d;
 
 % For testing gains without mixing proportions
+% I = 1;
 % ka = a.ka; % Acceleration [kg]
 % kv = a.kv; % Velocity     [kg/s]
 % ks = a.ks; % Position     [kg*s^-2]
@@ -139,6 +140,11 @@ ki = a.ki*k; % Integral     [kg*s^-3]
 % Derivative of states
 s_dot = zeros(3,1);
 
+% Initial control force
+c_i = a.int_scale_i(t); % Initial scale of inertial gains
+c_k = a.int_scale_k(t); % Initial scale of rel position gains
+f_int = -(a.kp*pr_err + a.ki*pr_err_accum + a.kd*(p_dot-a.d_dot(t)))*c_k;
+
 % Inertial Velocity
 s_dot(1) = p_dot;
 
@@ -146,10 +152,14 @@ s_dot(1) = p_dot;
 f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(p_dot-a.d_dot(t)));
 
 % Inertial Acceleration
-s_dot(2) = (-kv*p_dot - ks*p + f_pr - a.m*a.g + f_comp) / (a.m + ka);
-
-if (abs(s_dot(2)) < 1e-8 && p_dot > 1e-8 && I == 1)
-    f_comp = -kv*p_dot + f_comp;
+s_dot(2) = (-kv*p_dot*c_i - ks*p*c_i + f_pr - a.m*a.g + f_comp + f_int)...
+                                                        / (a.m + ka*c_i);
+% abs(s_dot(2)) < 1e-3 && p_dot > 1e-3
+if (abs(s_dot(2)) < 1e-2 && p_dot > 1e-2 && I == 1)
+    t
+    -kv*p_dot
+    f_comp
+    f_comp = -kv*p_dot + f_comp
 end
 
 % Error in relative position

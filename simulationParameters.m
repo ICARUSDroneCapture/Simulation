@@ -3,7 +3,7 @@ close all; clear; clc;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%% Arm Parameters %%%%%%%%%%%%%%%%%%%%%%%
 
-a.m = 1;    % Mass [kg]
+a.m = 10;    % Mass [kg]
 a.g = 9.81; % Acceleration of gravity [m/s^2]
 global f_comp
 f_comp = 5*a.g; % Gravity compensation force mass [N]
@@ -70,6 +70,16 @@ a.ks = 0;  % Position Control [kg*s^-2]
 a.kp = 3000;  % Proportional [kg*s^-2]
 a.kd = 500;  % Derivative [kg/s]    
 a.ki = 200;  % Integral [kg*s^-3] 
+
+% Progressively Increase inertial stability gains to full gains so initial
+% large values of velocity and acceleration do not cause large control
+% forces
+s0 = 0;  % Inital proportion of gain values to apply
+gain_rate = 0.5; % Rate at which gains are increased
+% a.int_scale_i = @(t) s0 + (1 - s0) * (1 - exp(-gain_rate*t));
+% a.int_scale_k = @(t) exp(-gain_rate*t);
+a.int_scale_i = @(t) 1;
+a.int_scale_k = @(t) 0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Control Gain Mixing %%%%%%%%%%%%%%%%%%%%
