@@ -1,5 +1,3 @@
-close all; clear; clc;
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%% Arm Parameters %%%%%%%%%%%%%%%%%%%%%%%
 
@@ -22,14 +20,14 @@ beta = 2*pi/T; % wave frequency [rad/s]
 % Inertial Position, Velocity, and Acceleration of Deck
 
 % Sine Wave
-% a.d = @(t) alpha*sin(beta*t) + hdeck;      % [m]
-% a.d_dot = @(t) beta*alpha*cos(beta*t);    % [m/s]
-% a.d_ddot = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
+a.d = @(t) alpha*sin(beta*t) + hdeck;      % [m]
+a.d_dot = @(t) beta*alpha*cos(beta*t);    % [m/s]
+a.d_ddot = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
  
 % Cosine Wave
-a.d = @(t) alpha*cos(beta*t) + hdeck;      % [m]
-a.d_dot = @(t) -beta*alpha*sin(beta*t);    % [m/s]
-a.d_ddot = @(t) -beta^2*alpha*cos(beta*t); % [m*s^-2]
+% a.d = @(t) alpha*cos(beta*t) + hdeck;      % [m]
+% a.d_dot = @(t) -beta*alpha*sin(beta*t);    % [m/s]
+% a.d_ddot = @(t) -beta^2*alpha*cos(beta*t); % [m*s^-2]
 
 % Square Wave
 % N = 3; % Number of terms in the Fourier series
