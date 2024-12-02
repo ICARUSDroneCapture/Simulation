@@ -21,7 +21,7 @@ real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(b
 %   IMX-5: https://docs.inertialsense.com/datasheets/IMX-5_IMU_AHRS_GNSS-INS_Datasheet.pdf
 
 % Simulation time
-tspan = [0 40]; % [s]
+tspan = [0 10]; % [s]
 steps = 2000;
 timestep = tspan(1)/steps;
 t = linspace(0, tspan(2), steps);
@@ -41,7 +41,8 @@ gyro_samplingRate = specs.gyro_samplingRate;
 gyro_noiseDensity = specs.gyro_noiseDensity;
 b_a = specs.b_a;
 VRW = specs.VRW;
-b_g = specs.b_g;
+specs.b_g = 0;
+b_g = specs.b_g; 
 ARW = specs.ARW;
 accel_bandwidth = specs.accel_bandwidth;
 gyro_bandwidth = specs.gyro_bandwidth;
@@ -456,7 +457,7 @@ yyaxis left
 plot(t, accel_LSB)
 hold on
 xlabel("Time (s)")
-ylabel("Accuracy (%)")
+ylabel("Precision Error (Bits)")
 title("Number of Acceleration Bits of Error (with correction)")
 
 yyaxis right
@@ -469,7 +470,7 @@ yyaxis left
 plot(t, gyro_LSB)
 hold on
 xlabel("Time (s)")
-ylabel("Accuracy (%)")
+ylabel("Precision Error (Bits)")
 title("Number of Gyroscope Bits of Error (with correction)")
 
 yyaxis right

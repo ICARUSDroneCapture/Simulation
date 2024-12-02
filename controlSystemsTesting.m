@@ -23,6 +23,12 @@ specs.beta = 2*pi/T; % wave frequency [rad/s]
 imx_5_specs
 
 specs.g = a.g;
+% specs.accel_noiseDensity = 0;
+% specs.gyro_noiseDensity = 0;
+% specs.accel_resolution = 0.000001;
+% specs.gyro_resolution = 0.000001;
+% specs.accel_noiseDensity = specs.accel_noiseDensity / 100;
+% specs.gyro_noiseDensity = specs.gyro_noiseDensity / 100;
 a.specs = specs;
 
 % Measured signal
@@ -56,7 +62,9 @@ a.drift_error_accel_horz = @(t, n_a, quant_noise_accel, theta_err, p_ddot) (1 + 
 a.drift_error_gyro = @(t, n_g, quant_noise_gyro, theta_err, p_thetadot) (1 + specs.k)*a.quant_noise_gyro(t, a.gyro_quantized, p_thetadot) + specs.b_g + a.n_g(t);
 
 % Simulation time
-tspan = [0 10]; % [s]
+% startTime = T/4;
+startTime = 0;
+tspan = [startTime 10]; % [s]
 
 % Initial States
 p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
@@ -67,8 +75,7 @@ pm_dot = p_dot0;              % Platform integrated velocity [m/s]
 pm_ddot = a.d_ddot(tspan(1)); % Platform measured acceleration [m*s^-2]
 p_theta0 = a.real_ang(tspan(1)); % Platform inertial angle [deg]
 
-s0 = [p0; p_dot0; pr_err_accum0; pm0; pm_dot; pm_ddot; p_theta0];
-
+s0 = [p0; p_dot0; pr_err_accum0; pm0; pm_dot; pm_ddot];
 
 % Plotting readl disturbance vs measured disturbance
 
@@ -77,12 +84,34 @@ a.fi1 = axes;
 xlabel('Time (s)')
 ylabel('Drift (m/s^-2)')
 title('Vertical Accelerometer Signal vs Time')
+%% Running simulations
+
+
+% Running Simulation
+op = odeset('RelTol',1e-8,'AbsTol',1e-8); % Tolerance options
+[t_reg, s_reg] = ode15s(@(t,s)noError(t,s,a),tspan,s0,op);
+
+s0 = [p0; p_dot0; pr_err_accum0; pm0; pm_dot; pm_ddot; p_theta0];
 
 % Running Simulation
 op = odeset('RelTol',1e-8,'AbsTol',1e-8); % Tolerance options
 [t, s] = ode15s(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
 
 % plot(a.fi1, t,a.real_accel(t), color='black')
+
+% Feeding states back through EOM to calculating inertial acceleration of
+% the platfor
+p_ddot = zeros(size(t));
+p_thetadot = zeros(size(t));
+for i = 1:length(t)
+    s_dot = rigidArmControl(t(i),s(i,:),a);
+    p_ddot(i) = s_dot(2);
+    p_thetadot(i) = s_dot(7);
+end
+
+%% Plotting
+
+% With error ------------------------------------------------------------
 
 % Plotting Position vs Time and Acceleration vs Time
 figure;
@@ -92,11 +121,14 @@ sgtitle('Inertial Stability Performance')
 subplot(1,3,1);
 plot(t,s(:,1))
 hold on
+plot(t_reg, s_reg(:,1))
+hold on
 plot(t,a.d(t))
+xlim([0 .3])
 title('Inertial Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
-legend('Platform', 'Deck','Location','southeast')
+legend('Platform with Error', 'Platform without Error', 'Deck','Location','southeast')
 
 % Position
 subplot(1,3,2);
@@ -110,15 +142,6 @@ legend('Platform', 'Deck','Location','southeast')
 
 % Acceleration
 subplot(1,3,3);
-% Feeding states back through EOM to calculating inertial acceleration of
-% the platfor
-p_ddot = zeros(size(t));
-p_thetadot = zeros(size(t));
-for i = 1:length(t)
-    s_dot = rigidArmControl(t(i),s(i,:),a);
-    p_ddot(i) = s_dot(2);
-    p_thetadot(i) = s_dot(7);
-end
 plot(t,p_ddot)
 hold on
 plot(t,a.d_ddot(t))
@@ -128,7 +151,7 @@ yline(-p_ddot_max,'--')
 title('Inertial Acceleration vs Time')
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
-legend('Platform', 'test', 'Platform Measurement', 'Deck','Location','southeast')
+legend('Platform', 'Platform Measurement', 'Deck','Location','southeast')
 
 figure;
 subplot(1,2,1)
@@ -162,6 +185,47 @@ xlabel('Time (s)')
 ylabel('Position (m)')
 legend('','Full Inertial','Relative Position','')
 
+%% Plotting error
+
+sim_t = round(t(end),1);
+time_index = find(round(t_reg,2) == round(sim_t,2));
+plat_err = s(:,1);
+plat_no_err = s_reg(:,1);
+pos_err_worse = zeros(1, time_index);
+pos_err_avg = zeros(1, time_index);
+
+figure;
+plot(t,s(:,1))
+hold on
+plot(t_reg(1:time_index), s_reg(1:time_index,1))
+title('Relative Position vs Time')
+xlabel('Time (s)')
+ylabel('Position (m)')
+legend('Platform Position with Error', 'Platform Position without Error')
+
+for i=1:time_index
+    platform_without_err = round(plat_no_err(i),2);
+    integrated_index = find(round(plat_err,2) == platform_without_err);
+    platform_with_err = plat_err(integrated_index);
+    all_err = abs(platform_with_err - platform_without_err);
+    pos_err_worse(i) = max(all_err);
+    pos_err_avg(i) = mean(all_err);
+end
+
+figure
+subplot(2,1,1)
+plot(t_reg(1:time_index), pos_err_worse*100)
+title('Worst Relative Position Error vs Time')
+xlabel('Time (s)')
+ylabel('Error (cm)')
+
+subplot(2,1,2)
+plot(t_reg(1:time_index), pos_err_avg*100)
+title('Average Relative Position Error vs Time')
+xlabel('Time (s)')
+ylabel('Error (cm)')
+
+%%
 
 function s_dot = rigidArmControl(t, s, a)
 % rigidArmControl is the EOM for the 1 DOF model of the inertially
@@ -214,7 +278,6 @@ if t > specs.accel_resolution
     measuredState = [measured_a_x measured_a_y measured_a_z measured_g_x measured_g_y measured_g_z];
     corrected_a = compensateError(measuredState, specs, t);
     
-    % Error is way too high!
     pm_ddot_error = pm_ddot - corrected_a(3);
     p_thetadot_error = p_thetadot - corrected_a(4);
 
@@ -389,4 +452,92 @@ function state = compensateError(measuredState, specs, time)
     state(1:3) = corrected_a';
     state(4:6) = corrected_g';
     
+end
+
+
+function s_dot = noError(t, s, a)
+% rigidArmControl is the EOM for the 1 DOF model of the inertially
+% stabilized platform. It uses inertial acceleration control when the
+% platform is close to the center of the operation region, and uses PID
+% control on the relative position as the platform goes closer to the
+% operational bounderies
+%
+% Inputs:   t    = current time
+%           s    = vector of states
+%                = [p; p_dot; pr_err_accum] where p is the inertial position 
+%                  of the platform, pdot is the inertial velocity of the 
+%                  platform, and pr_err_accum is the integral of the error 
+%                  in the relative position of the platform
+%           a    = structure containing environmental constants and gain
+%                  values
+% Outputs:  sdot = time derivative of input state vector
+%                = [p_dot; p_ddot; pr_err] where pdot is the inertial 
+%                  velocity of the platform, p_ddot is the inertial 
+%                  acceleration of the platform,and pr_err is the error in 
+%                  the relative position of the platform
+
+% Current states
+p = s(1);
+p_dot = s(2);
+pr_err_accum = s(3);
+pm = s(4);
+pm_dot = s(5);
+pm_ddot = s(6);
+
+% Error in relative position (distance to center of operation region)
+pr = pm-a.d(t);
+pr_err = pr-a.pr_d;
+
+% For testing gains without mixing proportions
+% ka = a.ka; % Acceleration [kg]
+% kv = a.kv; % Velocity     [kg/s]
+% ks = a.ks; % Position     [kg*s^-2]
+% kp = a.kp; % Proportional [kg*s^-2]
+% kd = a.kd; % Derivative   [kg/s]
+% ki = a.ki; % Integral     [kg*s^-3]
+
+% Control gain proportions
+
+I = a.I(pr); % Proportion of inertial stability control to apply
+ka = a.ka*I; % Acceleration [kg]
+kv = a.kv*I; % Velocity     [kg/s]
+ks = a.ks*I; % Position     [kg*s^-2]
+
+k = a.K(pr);     % Proportion of relative position control to apply
+k_h = a.K_h(pr);
+kp = a.kp*k_h;     % Proportional [kg*s^-2]
+kd = a.kd*k_h;     % Derivative   [kg/s]
+ki = a.ki*k_h;     % Integral     [kg*s^-3]
+
+% Derivative of states
+s_dot = zeros(6,1);
+
+% Derivative of position
+s_dot(1) = p_dot;  % inertial velocity
+s_dot(4) = pm_dot; % measured inertial velocity
+
+% Control Law
+
+% Inertial stability control force
+c_i = a.initial_scale(t); % Initial scale of gains
+f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
+% Relative position control force
+f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(pm_dot-a.d_dot(t)));
+
+% Platform EOM
+p_ddot = (f_i+f_pr) / a.m;
+
+% Derivative of velocity
+s_dot(2) = p_ddot; % Inertial acceleration
+s_dot(5) = pm_ddot; % Measured inertial acceleration
+
+% Derivative of measured inertial acceleration
+s_dot(6) = a.omega*(p_ddot - pm_ddot);
+
+% Error in relative position
+s_dot(3) = pr_err;
+
+err_v=abs(p_dot-pm_dot);
+err_a=abs(p_ddot-pm_ddot);
+
 end
