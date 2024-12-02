@@ -6,7 +6,7 @@ close all; clear; clc;
 a.m = 10;    % Mass [kg]
 a.g = 9.81; % Acceleration of gravity [m/s^2]
 global f_comp
-f_comp = 5*a.g; % Gravity compensation force mass [N]
+f_comp = 3*a.g; % Gravity compensation force mass [N]
 a.pr_d = 0.5; % Desired relative position [m]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -75,7 +75,7 @@ a.ki = 200;  % Integral [kg*s^-3]
 % large values of velocity and acceleration do not cause large control
 % forces
 s0 = 0;  % Inital proportion of gain values to apply
-gain_rate = 0.5; % Rate at which gains are increased
+gain_rate = 0.8; % Rate at which gains are increased
 % a.int_scale_i = @(t) s0 + (1 - s0) * (1 - exp(-gain_rate*t));
 % a.int_scale_k = @(t) exp(-gain_rate*t);
 a.int_scale_i = @(t) 1;

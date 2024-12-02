@@ -126,24 +126,21 @@ pr_err = pr-a.pr_d;
 % ki = a.ki; % Integral     [kg*s^-3]
 
 % Control gain proportions
+c_i = a.int_scale_i(t); % Initial scale of intertial stability gains
+c_k = a.int_scale_k(t); % Initial scale of relative position gains
 
-I = a.I(pr); % Proportion of inertial stability control to apply
+I = a.I(pr)*c_i; % Proportion of inertial stability control to apply
 ka = a.ka*I; % Acceleration [kg]
 kv = a.kv*I; % Velocity     [kg/s]
 ks = a.ks*I; % Position     [kg*s^-2]
 
-k = a.K(pr); % Proportion of relative position control to apply
+k = max(a.K(pr),c_k); % Proportion of relative position control to apply
 kp = a.kp*k; % Proportional [kg*s^-2]
 kd = a.kd*k; % Derivative   [kg/s]
 ki = a.ki*k; % Integral     [kg*s^-3]
 
 % Derivative of states
 s_dot = zeros(3,1);
-
-% Initial control force
-c_i = a.int_scale_i(t); % Initial scale of inertial gains
-c_k = a.int_scale_k(t); % Initial scale of rel position gains
-f_int = -(a.kp*pr_err + a.ki*pr_err_accum + a.kd*(p_dot-a.d_dot(t)))*c_k;
 
 % Inertial Velocity
 s_dot(1) = p_dot;
@@ -152,14 +149,10 @@ s_dot(1) = p_dot;
 f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(p_dot-a.d_dot(t)));
 
 % Inertial Acceleration
-s_dot(2) = (-kv*p_dot*c_i - ks*p*c_i + f_pr - a.m*a.g + f_comp + f_int)...
-                                                        / (a.m + ka*c_i);
+s_dot(2) = (-kv*p_dot - ks*p + f_pr - a.m*a.g + f_comp) / (a.m + ka);
 % abs(s_dot(2)) < 1e-3 && p_dot > 1e-3
-if (abs(s_dot(2)) < 1e-2 && p_dot > 1e-2 && I == 1)
-    t
-    -kv*p_dot
-    f_comp
-    f_comp = -kv*p_dot + f_comp
+if ( (abs(s_dot(2)) < 1e-7) && (abs(p_dot) > 1e-8) && (I == 1))
+    f_comp = -kv*p_dot + f_comp;
 end
 
 % Error in relative position
