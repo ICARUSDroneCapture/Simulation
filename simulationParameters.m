@@ -3,10 +3,11 @@ close all; clear; clc;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%% Arm Parameters %%%%%%%%%%%%%%%%%%%%%%%
 
-a.m = 10;    % Mass [kg]
+a.m = 5;    % Mass [kg]
 a.g = 9.81; % Acceleration of gravity [m/s^2]
 global f_comp
-f_comp = 3*a.g; % Gravity compensation force mass [N]
+m0 = 5;    % Initial mass guess [kg]
+f_comp = m0*a.g; % Gravity compensation force mass [N]
 a.pr_d = 0.5; % Desired relative position [m]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
