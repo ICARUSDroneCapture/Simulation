@@ -61,8 +61,8 @@ a.a_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1); %
 %   a.kp = 1000; a.kd = 10; a.ki = 100;
 
 % Inertial Stabilization Control
-a.ka =  700;  % Acceleration Control [kg]
-a.kv = 5000;  % Velocity Control [kg/s]
+a.ka =  1.8;  % Acceleration Control [kg]
+a.kv = 90;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2] 
 
 % Relative Position Control

@@ -14,7 +14,7 @@ specs.gyro_noiseDensity = 5 * 10^-3; % dps/sqrt(Hz)
 specs.gyro_bandwidth = 250; % Hz
 
 % Accel Specs
-specs.b_a = 0.019 / 1000 * 9.8; % Time Varying Bias (m/s^-2)
+specs.b_a = 0.019 / 1000 * a.g; % Time Varying Bias (m/s^-2)
 specs.VRW = 0.02 / 60; % Velocity Random Walk (m/s/sqrt(s))
 
 % Gyro Specs

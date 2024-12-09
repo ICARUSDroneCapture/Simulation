@@ -89,13 +89,13 @@ title('Vertical Accelerometer Signal vs Time')
 
 % Running Simulation
 op = odeset('RelTol',1e-8,'AbsTol',1e-8); % Tolerance options
-[t_reg, s_reg] = ode15s(@(t,s)noError(t,s,a),tspan,s0,op);
+[t_reg, s_reg] = ode23s(@(t,s)noError(t,s,a),tspan,s0,op);
 
 s0 = [p0; p_dot0; pr_err_accum0; pm0; pm_dot; pm_ddot; p_theta0];
 
 % Running Simulation
 op = odeset('RelTol',1e-8,'AbsTol',1e-8); % Tolerance options
-[t, s] = ode15s(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
+[t, s] = ode23s(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
 
 % plot(a.fi1, t,a.real_accel(t), color='black')
 
@@ -124,7 +124,6 @@ hold on
 plot(t_reg, s_reg(:,1))
 hold on
 plot(t,a.d(t))
-xlim([0 .3])
 title('Inertial Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
@@ -151,7 +150,7 @@ yline(-p_ddot_max,'--')
 title('Inertial Acceleration vs Time')
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
-legend('Platform', 'Platform Measurement', 'Deck','Location','southeast')
+legend('Platform', 'Deck','Location','southeast')
 
 figure;
 subplot(1,2,1)
@@ -185,14 +184,16 @@ xlabel('Time (s)')
 ylabel('Position (m)')
 legend('','Full Inertial','Relative Position','')
 
-%% Plotting error
+%% Getting error
 
-sim_t = round(t(end),1);
-time_index = find(round(t_reg,2) == round(sim_t,2));
+sim_t = round(t(end),3);
+time_index = find(round(t_reg,3) == sim_t);
+time_index = time_index(1);
 plat_err = s(:,1);
 plat_no_err = s_reg(:,1);
 pos_err_worse = zeros(1, time_index);
 pos_err_avg = zeros(1, time_index);
+pos_err_best = zeros(1, time_index);
 
 figure;
 plot(t,s(:,1))
@@ -204,26 +205,54 @@ ylabel('Position (m)')
 legend('Platform Position with Error', 'Platform Position without Error')
 
 for i=1:time_index
-    platform_without_err = round(plat_no_err(i),2);
-    integrated_index = find(round(plat_err,2) == platform_without_err);
-    platform_with_err = plat_err(integrated_index);
-    all_err = abs(platform_with_err - platform_without_err);
+    platform_without_err = round(plat_no_err(i),3);
+    integrated_index = find(round(plat_err,3) == platform_without_err);
+    platform_with_err = plat_err(integrated_index(1));
+    all_err = abs(platform_with_err - plat_no_err(i));
     pos_err_worse(i) = max(all_err);
+    pos_err_best(i) = min(all_err);
     pos_err_avg(i) = mean(all_err);
 end
 
+%% Plotting Error
+sz = 2;
 figure
-subplot(2,1,1)
-plot(t_reg(1:time_index), pos_err_worse*100)
+subplot(3,1,1)
+scatter(t_reg(1:time_index), pos_err_worse*100, sz, 'filled', displayName="Positional Error")
+hold on
+plot(t,a.d(t)/50, displayName="Deck Disturbance")
 title('Worst Relative Position Error vs Time')
 xlabel('Time (s)')
 ylabel('Error (cm)')
+legend
 
-subplot(2,1,2)
-plot(t_reg(1:time_index), pos_err_avg*100)
+subplot(3,1,2)
+scatter(t_reg(1:time_index), pos_err_worse*100, sz, 'filled', displayName="Positional Error")
+hold on
+plot(t,a.d(t)/50, displayName="Deck Disturbance")
 title('Average Relative Position Error vs Time')
 xlabel('Time (s)')
 ylabel('Error (cm)')
+legend
+
+subplot(3,1,3)
+scatter(t_reg(1:time_index), pos_err_worse*100, sz, 'filled', displayName="Positional Error")
+hold on
+plot(t,a.d(t)/50, displayName="Deck Disturbance")
+title('Best Relative Position Error vs Time')
+xlabel('Time (s)')
+ylabel('Error (cm)')
+legend
+
+figure
+scatter(t_reg(1:time_index), pos_err_worse*100, sz, 'filled', displayName="Positional Error")
+hold on
+plot(t,a.d(t)/50, displayName="Deck Disturbance")
+title('Worst Case Relative Position Error vs Time')
+xlabel('Time (s)')
+ylabel('Error (cm)')
+legend
+
 
 %%
 
@@ -281,8 +310,8 @@ if t > specs.accel_resolution
     pm_ddot_error = pm_ddot - corrected_a(3);
     p_thetadot_error = p_thetadot - corrected_a(4);
 
-    pm_ddot = pm_ddot + (pm_ddot_error/1000);
-    p_thetadot = p_thetadot + (p_thetadot_error/1000);
+    pm_ddot = pm_ddot + (pm_ddot_error/1);
+    p_thetadot = p_thetadot + (p_thetadot_error/1);
 
 
     % pm_ddot = corrected_a(3);

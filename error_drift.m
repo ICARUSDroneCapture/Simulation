@@ -41,7 +41,6 @@ gyro_samplingRate = specs.gyro_samplingRate;
 gyro_noiseDensity = specs.gyro_noiseDensity;
 b_a = specs.b_a;
 VRW = specs.VRW;
-specs.b_g = 0;
 b_g = specs.b_g; 
 ARW = specs.ARW;
 accel_bandwidth = specs.accel_bandwidth;
