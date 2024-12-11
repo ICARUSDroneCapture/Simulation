@@ -23,7 +23,7 @@ real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(b
 % Simulation time
 tspan = [0 10]; % [s]
 steps = 2000;
-timestep = tspan(1)/steps;
+timestep = tspan(2)/steps;
 t = linspace(0, tspan(2), steps);
 
 imx_5_specs
@@ -322,6 +322,44 @@ ylabel('Angular Velocity (deg/s)')
 title('Drifting Gyroscope Signal')
 legend('Raw Measurement', 'Measurement Correction', 'Expected Calculation')
 
+%% Kalman Filtering
+noise_std = [accel_noise_std; accel_noise_std; accel_noise_std; gyro_noise_std; gyro_noise_std; gyro_noise_std];
+q = [timestep; timestep; timestep; timestep; timestep; timestep];
+filteredStates = KalmanFilter(t, StatesOverTime_corrected', noise_std, q);
+
+
+figure(10)
+
+subplot(1,3,1)
+plot(t, StatesOverTime_corrected(:, 1))
+hold on
+plot(t, plot(t, filteredStates(1,:)))
+xlabel('Time (s)')
+ylabel('Acceleration (m/s^2)')
+title('Noisy and Filtered Horizontal Accelerometer Signal')
+legend('Corrected but Noisy Signal', 'Filtered Signal')
+
+
+subplot(1,3,2)
+plot(t, StatesOverTime_corrected(:, 3))
+hold on
+plot(t, plot(t, filteredStates(3,:)))
+xlabel('Time (s)')
+ylabel('Acceleration (m/s^2)')
+title('Noisy and Filtered Vertical Accelerometer Signal')
+legend('Corrected but Noisy Signal', 'Filtered Signal')
+
+
+subplot(1,3,3)
+plot(t, StatesOverTime_corrected(:, 4))
+hold on
+plot(t, plot(t, filteredStates(4,:)))
+xlabel('Time (s)')
+ylabel('Angular Velocity (deg/s)')
+title('Noisy and Filtered Gyroscope Signal')
+legend('Corrected but Noisy Signal', 'Filtered Signal')
+
+
 %% Finding Accuracy of Corrected Data
 
 real_accel_data = real_accel(t)';
@@ -610,4 +648,34 @@ function soln = LeastSquares(time, Datapoints, specs)
     a = v(1);
     b = v(2);
     soln = a*sin(beta * time)+b;
+end
+
+function states = KalmanFilter(t, signal, noise_std, q)
+    n = length(t);
+    
+    dim = size(signal, 1);
+
+    err_measure = noise_std;
+    err_estimate = err_measure;
+
+    states = zeros(size(signal));
+
+    last_estimate = signal(:, 1);
+
+    for i = 1:n
+        mea = signal(:, i);
+        
+        E = err_measure + err_estimate;
+
+        kalman_gain = err_estimate ./ E;
+        K = diag(kalman_gain);
+
+        curr_estimate = last_estimate + K * (mea - last_estimate);
+
+        diff = diag(abs(last_estimate - curr_estimate));
+        err_estimate = (diag(ones(dim,1)) - K)*err_estimate + diff*q;
+
+        last_estimate = curr_estimate;
+        states(:, i) = curr_estimate;
+    end
 end

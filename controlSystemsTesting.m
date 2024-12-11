@@ -452,11 +452,6 @@ function state = compensateError(measuredState, specs, time)
     ACCEL_BIAS = [b_a b_a b_a]';
     GYRO_BIAS = [b_g b_g b_g]';
 
-    % Noise
-
-    ACCEL_NOISE = [accel_noiseDensity accel_noiseDensity accel_noiseDensity]';
-    GYRO_NOISE = [gyro_noiseDensity gyro_noiseDensity gyro_noiseDensity]';
-
     theta_err = b_g*time + ARW*sqrt(time);
 
     a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1) - g*sin(theta_err);
@@ -569,4 +564,34 @@ s_dot(3) = pr_err;
 err_v=abs(p_dot-pm_dot);
 err_a=abs(p_ddot-pm_ddot);
 
+end
+
+function states = KalmanFilter(t, signal, noise_std, q)
+    n = length(t);
+    
+    dim = size(signal, 1);
+
+    err_measure = noise_std;
+    err_estimate = err_measure;
+
+    states = zeros(size(signal));
+
+    last_estimate = signal(:, 1);
+
+    for i = 1:n
+        mea = signal(:, i);
+        
+        E = err_measure + err_estimate;
+
+        kalman_gain = err_estimate ./ E;
+        K = diag(kalman_gain);
+
+        curr_estimate = last_estimate + K * (mea - last_estimate);
+
+        diff = diag(abs(last_estimate - curr_estimate));
+        err_estimate = (diag(ones(dim,1)) - K)*err_estimate + diff*q;
+
+        last_estimate = curr_estimate;
+        states(:, i) = curr_estimate;
+    end
 end
