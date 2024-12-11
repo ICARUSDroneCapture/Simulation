@@ -323,9 +323,11 @@ title('Drifting Gyroscope Signal')
 legend('Raw Measurement', 'Measurement Correction', 'Expected Calculation')
 
 %% Kalman Filtering
+scale = 0.1;
 noise_std = [accel_noise_std; accel_noise_std; accel_noise_std; gyro_noise_std; gyro_noise_std; gyro_noise_std];
+noise_scaled = scale.*noise_std;
 q = [timestep; timestep; timestep; timestep; timestep; timestep];
-filteredStates = KalmanFilter(t, StatesOverTime_corrected', noise_std, q);
+filteredStates = KalmanFilter(t, StatesOverTime_corrected', noise_scaled, q);
 
 
 figure(10)
