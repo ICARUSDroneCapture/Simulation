@@ -86,10 +86,32 @@ ylabel('Drift (m/s^-2)')
 title('Vertical Accelerometer Signal vs Time')
 %% Running simulations
 
-tolerance = 5e-6;
+% --------------------- Running no error simulation -----------------------
+
+% tstep = 1/60;
+% startTime = 0;
+% finishTime = 10;
+% t = startTime:tstep:finishTime;
+% s = zeros(length(t), length(s0));
+% 
+% s(1,:) = noError(t(1),s0,a);
+% sStep = s(1,:).*tstep+s0;
+% s(2,:) = noError(t(2),sStep,a);
+% 
+% for i = 2:length(t)
+%     time = t(i);
+%     sStep = s(i,:).*tstep+s(i-1,:);
+%     s(i+1,:) = noError(t(i),sStep,a);
+% end
+
+tolerance = 6e-6;
 % Running Simulation
 op = odeset('RelTol',tolerance,'AbsTol',tolerance); % Tolerance options
 [t_reg, s_reg] = ode23s(@(t,s)noError(t,s,a),tspan,s0,op);
+
+
+
+% --------------------- Running with error simulation ---------------------
 
 s0 = [p0; p_dot0; pr_err_accum0; pm0; pm_dot; pm_ddot; p_theta0];
 
