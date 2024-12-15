@@ -66,9 +66,9 @@ a.kv = 90;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2] 
 
 % Relative Position Control
-a.kp = 700;  % Proportional [kg*s^-2]
-a.kd = 500;  % Derivative [kg/s]    
-a.ki = 200;  % Integral [kg*s^-3]
+a.kp = 7;  % Proportional [kg*s^-2]
+a.kd = 50;  % Derivative [kg/s]    
+a.ki = 2;  % Integral [kg*s^-3]
 
 % Low-Pass filter on measured acceleration
 a.f_c = 1000; % Cutoff frequency [Hz]
