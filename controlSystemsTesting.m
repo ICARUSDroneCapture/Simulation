@@ -86,15 +86,15 @@ ylabel('Drift (m/s^-2)')
 title('Vertical Accelerometer Signal vs Time')
 %% Running simulations
 
-
+tolerance = 5e-6;
 % Running Simulation
-op = odeset('RelTol',1e-8,'AbsTol',1e-8); % Tolerance options
+op = odeset('RelTol',tolerance,'AbsTol',tolerance); % Tolerance options
 [t_reg, s_reg] = ode23s(@(t,s)noError(t,s,a),tspan,s0,op);
 
 s0 = [p0; p_dot0; pr_err_accum0; pm0; pm_dot; pm_ddot; p_theta0];
 
 % Running Simulation
-op = odeset('RelTol',1e-8,'AbsTol',1e-8); % Tolerance options
+op = odeset('RelTol',tolerance,'AbsTol',tolerance); % Tolerance options
 [t, s] = ode23s(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
 
 % plot(a.fi1, t,a.real_accel(t), color='black')
@@ -185,9 +185,9 @@ ylabel('Position (m)')
 legend('','Full Inertial','Relative Position','')
 
 %% Getting error
-
-sim_t = round(t(end),3);
-time_index = find(round(t_reg,3) == sim_t);
+err_round = 3;
+sim_t = round(t(end),err_round);
+time_index = find(round(t_reg,err_round) == sim_t);
 time_index = time_index(1);
 plat_err = s(:,1);
 plat_no_err = s_reg(:,1);
@@ -205,8 +205,8 @@ ylabel('Position (m)')
 legend('Platform Position with Error', 'Platform Position without Error')
 
 for i=1:time_index
-    platform_without_err = round(plat_no_err(i),3);
-    integrated_index = find(round(plat_err,3) == platform_without_err);
+    platform_without_err = round(plat_no_err(i),err_round);
+    integrated_index = find(round(plat_err,err_round) == platform_without_err);
     platform_with_err = plat_err(integrated_index(1));
     all_err = abs(platform_with_err - plat_no_err(i));
     pos_err_worse(i) = max(all_err);
