@@ -61,8 +61,15 @@ a.a_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1); %
 %   a.kp = 1000; a.kd = 10; a.ki = 100;
 
 % Inertial Stabilization Control
-a.ka =  1.8;  % Acceleration Control [kg]
-a.kv = 90;  % Velocity Control [kg/s]
+
+% Precise, unpredictable
+% a.ka =  0.98;  % Acceleration Control [kg]
+% a.kv = 80;  % Velocity Control [kg/s]
+% a.ks = 0;  % Position Control [kg*s^-2] 
+
+% Less precise, predictable
+a.ka =  0.38;  % Acceleration Control [kg]
+a.kv = 30;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2] 
 
 % Relative Position Control

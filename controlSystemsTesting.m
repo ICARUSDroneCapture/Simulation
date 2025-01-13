@@ -64,7 +64,8 @@ a.drift_error_gyro = @(t, n_g, quant_noise_gyro, theta_err, p_thetadot) (1 + spe
 % Simulation time
 % startTime = T/4;
 startTime = 0;
-tspan = [startTime 10]; % [s]
+finishTime = 10;
+tspan = [startTime finishTime]; % [s]
 
 % Initial States
 p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
@@ -207,76 +208,122 @@ ylabel('Position (m)')
 legend('','Full Inertial','Relative Position','')
 
 %% Getting error
-err_round = 3;
-sim_t = round(t(end),err_round);
-time_index = find(round(t_reg,err_round) == sim_t);
-time_index = time_index(1);
-plat_err = s(:,1);
-plat_no_err = s_reg(:,1);
-pos_err_worse = zeros(1, time_index);
-pos_err_avg = zeros(1, time_index);
-pos_err_best = zeros(1, time_index);
 
-figure;
-plot(t,s(:,1))
+% Checking that both simulations finished to desired time
+if t_reg(end) ~= finishTime
+    fprint('Simulation (without error introduced) failed to finish.')
+    exit 1
+elseif t(end) ~= finishTime
+    fprint('Simulation (with error introduced) failed to finish.')
+    exit 1
+end
+
+% Plotting time
+sz = 2;
+figure
+scatter(1:length(t), t, sz, 'filled', displayName="With Error")
 hold on
-plot(t_reg(1:time_index), s_reg(1:time_index,1))
+scatter(1:length(t_reg), t_reg, sz, 'filled', displayName="Without Error")
+ylabel('Time Values')
+title('Timesteps used in Integration')
+legend
+
+% Plotting both positions, with and without error
+figure;
+plot(t, s(:,1))
+hold on
+plot(t_reg, s_reg(:,1))
 title('Relative Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
 legend('Platform Position with Error', 'Platform Position without Error')
 
-for i=1:time_index
-    platform_without_err = round(plat_no_err(i),err_round);
-    integrated_index = find(round(plat_err,err_round) == platform_without_err);
-    platform_with_err = plat_err(integrated_index(1));
-    all_err = abs(platform_with_err - plat_no_err(i));
-    pos_err_worse(i) = max(all_err);
-    pos_err_best(i) = min(all_err);
-    pos_err_avg(i) = mean(all_err);
+% Precision (number of decimals) of interpolation
+err_round = 3;
+
+% Getting the more precise time matrix
+if size(t_reg) > size(t)
+    t_precise = t_reg;
+    p_precise = s_reg(:,1);
+    t_compare = t;
+    p_compare = s(:,1);
+else
+    t_precise = t;
+    p_precise = s(:,1);
+    t_compare = t_reg;
+    p_compare = s_reg(:,1);
+end
+
+finishIndex = length(t_precise);
+pos_err = zeros(1, finishIndex);
+
+for i=1:finishIndex
+    
+    time_precise = t_precise(i);
+    pos_precise = p_precise(i);
+
+    t_ref = round(time_precise, err_round);
+    time_interp_idx = findNearest(t_ref, t_compare);
+
+    time_interp = t_compare(time_interp_idx);
+    pos_interp = p_compare(time_interp_idx);
+    
+    pos_err(i) = abs(pos_precise - pos_interp);
 end
 
 %% Plotting Error
+
 sz = 2;
+% figure
+% subplot(3,1,1)
+% scatter(t_ref, pos_err_worse*100, sz, 'filled', displayName="Positional Error")
+% hold on
+% plot(t,a.d(t)/50, displayName="Deck Disturbance")
+% title('Worst Relative Position Error vs Time')
+% xlabel('Time (s)')
+% ylabel('Error (cm)')
+% legend
+% 
+% subplot(3,1,2)
+% scatter(t_ref, pos_err_worse*100, sz, 'filled', displayName="Positional Error")
+% hold on
+% plot(t,a.d(t)/50, displayName="Deck Disturbance")
+% title('Average Relative Position Error vs Time')
+% xlabel('Time (s)')
+% ylabel('Error (cm)')
+% legend
+% 
+% subplot(3,1,3)
+% scatter(t_ref, pos_err_worse*100, sz, 'filled', displayName="Positional Error")
+% hold on
+% plot(t,a.d(t)/50, displayName="Deck Disturbance")
+% title('Best Relative Position Error vs Time')
+% xlabel('Time (s)')
+% ylabel('Error (cm)')
+% legend
+
 figure
-subplot(3,1,1)
-scatter(t_reg(1:time_index), pos_err_worse*100, sz, 'filled', displayName="Positional Error")
+scatter(t_precise, pos_err*100, sz, 'filled', displayName="Positional Error")
 hold on
-plot(t,a.d(t)/50, displayName="Deck Disturbance")
-title('Worst Relative Position Error vs Time')
-xlabel('Time (s)')
-ylabel('Error (cm)')
-legend
-
-subplot(3,1,2)
-scatter(t_reg(1:time_index), pos_err_worse*100, sz, 'filled', displayName="Positional Error")
-hold on
-plot(t,a.d(t)/50, displayName="Deck Disturbance")
-title('Average Relative Position Error vs Time')
-xlabel('Time (s)')
-ylabel('Error (cm)')
-legend
-
-subplot(3,1,3)
-scatter(t_reg(1:time_index), pos_err_worse*100, sz, 'filled', displayName="Positional Error")
-hold on
-plot(t,a.d(t)/50, displayName="Deck Disturbance")
-title('Best Relative Position Error vs Time')
-xlabel('Time (s)')
-ylabel('Error (cm)')
-legend
-
-figure
-scatter(t_reg(1:time_index), pos_err_worse*100, sz, 'filled', displayName="Positional Error")
-hold on
-plot(t,a.d(t)/50, displayName="Deck Disturbance")
+plot(t,a.d(t)/200, displayName="Deck Disturbance")
 title('Worst Case Relative Position Error vs Time')
 xlabel('Time (s)')
 ylabel('Error (cm)')
 legend
 
+%% Functions
 
-%%
+function min_idx = findNearest(t_ref, t_compare)
+    min_diff = 1;
+    min_idx = 0;
+    for idx=1:length(t_compare)
+        curr_t = t_compare(idx);
+        if abs(curr_t-t_ref) < min_diff
+            min_diff = abs(curr_t-t_ref);
+            min_idx = idx;
+        end
+    end
+end
 
 function s_dot = rigidArmControl(t, s, a)
 % rigidArmControl is the EOM for the 1 DOF model of the inertially
