@@ -21,6 +21,7 @@ specs.T = Tmax / 1;  % Period of deck disturbance [s]
 specs.beta = 2*pi/T; % wave frequency [rad/s]
 
 imx_5_specs
+% gx5_specs
 
 specs.g = a.g;
 % specs.accel_noiseDensity = 0;
@@ -125,11 +126,11 @@ op = odeset('RelTol',tolerance,'AbsTol',tolerance); % Tolerance options
 % Feeding states back through EOM to calculating inertial acceleration of
 % the platfor
 p_ddot = zeros(size(t));
-p_thetadot = zeros(size(t));
+p_theta = zeros(size(t));
 for i = 1:length(t)
     s_dot = rigidArmControl(t(i),s(i,:),a);
-    p_ddot(i) = s_dot(2);
-    p_thetadot(i) = s_dot(7);
+    p_ddot(i) = s_dot(6);
+    p_theta(i) = s_dot(7);
 end
 
 %% Plotting
@@ -180,12 +181,24 @@ subplot(1,2,1)
 plot(t, a.real_ang_rate(t))
 xlabel('Time (s)')
 ylabel('Angular Rate (deg/s)')
-title('Platform Angular Rate Before Control')
+title('Platform Angle Before Control')
 subplot(1,2,2)
-plot(t, p_thetadot)
+plot(t, p_theta)
 xlabel('Time (s)')
 ylabel('Angular Rate (deg/s)')
-title('Platform Angular Rate After Control')
+title('Platform Angle After Control')
+
+figure;
+subplot(1,2,1)
+plot(t, a.real_accel(t))
+xlabel('Time (s)')
+ylabel('Acceleration (m/s^2)')
+title('Platform Acceleration Before Control')
+subplot(1,2,2)
+plot(t, p_ddot)
+xlabel('Time (s)')
+ylabel('Acceleration (m/s^2)')
+title('Platform Acceleration After Control')
 
 % Plotting relative position
 figure;
@@ -211,11 +224,11 @@ legend('','Full Inertial','Relative Position','')
 
 % Checking that both simulations finished to desired time
 if t_reg(end) ~= finishTime
-    fprint('Simulation (without error introduced) failed to finish.')
-    exit 1
+    fprintf('Simulation (without error introduced) failed to finish.')
+    exit
 elseif t(end) ~= finishTime
-    fprint('Simulation (with error introduced) failed to finish.')
-    exit 1
+    fprintf('Simulation (with error introduced) failed to finish.')
+    exit
 end
 
 % Plotting time
@@ -233,7 +246,7 @@ figure;
 plot(t, s(:,1))
 hold on
 plot(t_reg, s_reg(:,1))
-title('Relative Position vs Time')
+title('Inertial Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
 legend('Platform Position with Error', 'Platform Position without Error')
@@ -311,6 +324,17 @@ xlabel('Time (s)')
 ylabel('Error (cm)')
 legend
 
+growth = diff(pos_err);
+
+figure
+scatter(t_precise(2:end), growth*100, sz, 'filled', displayName="Positional Error")
+hold on
+plot(t,a.d(t)/200, displayName="Deck Disturbance")
+title('Error Growth over Time')
+xlabel('Time (s)')
+ylabel('Error (cm)')
+legend
+
 %% Functions
 
 function min_idx = findNearest(t_ref, t_compare)
@@ -375,13 +399,12 @@ if t > specs.accel_resolution
 
     measuredState = [measured_a_x measured_a_y measured_a_z measured_g_x measured_g_y measured_g_z];
     corrected_a = compensateError(measuredState, specs, t);
-    
+
     pm_ddot_error = pm_ddot - corrected_a(3);
     p_thetadot_error = p_thetadot - corrected_a(4);
 
     pm_ddot = pm_ddot + (pm_ddot_error/1);
     p_thetadot = p_thetadot + (p_thetadot_error/1);
-
 
     % pm_ddot = corrected_a(3);
     % p_thetadot = corrected_a(4);
