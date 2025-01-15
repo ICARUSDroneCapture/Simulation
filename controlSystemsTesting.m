@@ -111,7 +111,17 @@ tolerance = 6e-6;
 op = odeset('RelTol',tolerance,'AbsTol',tolerance); % Tolerance options
 [t_reg, s_reg] = ode23s(@(t,s)noError(t,s,a),tspan,s0,op);
 
+% Fixed-step integrator
+dt = 0.01; % s, 10ms
+type = 2;
+s_i_fixed = [p0              0;
+             p_dot0          0;
+             pr_err_accum0   0;
+             pm0             0;
+             pm_dot          0;
+             pm_ddot         0];
 
+s_fixed = fixedIntegration(s_i_fixed, dt, tspan, type, a);
 
 % --------------------- Running with error simulation ---------------------
 
@@ -225,10 +235,10 @@ legend('','Full Inertial','Relative Position','')
 % Checking that both simulations finished to desired time
 if t_reg(end) ~= finishTime
     fprintf('Simulation (without error introduced) failed to finish.')
-    exit
+    return
 elseif t(end) ~= finishTime
     fprintf('Simulation (with error introduced) failed to finish.')
-    exit
+    return
 end
 
 % Plotting time
@@ -686,4 +696,92 @@ function states = KalmanFilter(t, signal, noise_std, q)
         last_estimate = curr_estimate;
         states(:, i) = curr_estimate;
     end
+end
+
+function s_fixed = fixedIntegration(s_i_fixed, dt, tspan, type, a)
+    startTime = tspan(1);
+    finishTime = tspan(2);
+
+    s_fixed = [];
+
+    % Derivative of states
+    s_dot = zeros(size(s_i_fixed));
+
+    figure
+    hold on
+
+    for t=startTime:dt:finishTime
+        t
+    
+        % Current states
+        p = s_i_fixed(1, 1);
+        p_dot = s_i_fixed(2, 1);
+        pr_err_accum = s_i_fixed(3, 1);
+        pm = s_i_fixed(4, 1);
+        pm_dot = s_i_fixed(5, 1);
+        pm_ddot = s_i_fixed(6, 1);
+        
+        % Error in relative position (distance to center of operation region)
+        pr = pm-a.d(t);
+        pr_err = pr-a.pr_d;
+        
+        % For testing gains without mixing proportions
+        % ka = a.ka; % Acceleration [kg]
+        % kv = a.kv; % Velocity     [kg/s]
+        % ks = a.ks; % Position     [kg*s^-2]
+        % kp = a.kp; % Proportional [kg*s^-2]
+        % kd = a.kd; % Derivative   [kg/s]
+        % ki = a.ki; % Integral     [kg*s^-3]
+        
+        % Control gain proportions
+        
+        I = a.I(pr); % Proportion of inertial stability control to apply
+        ka = a.ka*I; % Acceleration [kg]
+        kv = a.kv*I; % Velocity     [kg/s]
+        ks = a.ks*I; % Position     [kg*s^-2]
+        
+        k = a.K(pr);     % Proportion of relative position control to apply
+        k_h = a.K_h(pr);
+        kp = a.kp*k_h;     % Proportional [kg*s^-2]
+        kd = a.kd*k_h;     % Derivative   [kg/s]
+        ki = a.ki*k_h;     % Integral     [kg*s^-3]
+        
+        % Derivative of position
+        s_dot(1, 1) = p_dot;  % inertial velocity
+        s_dot(4, 1) = pm_dot; % measured inertial velocity
+        
+        % Control Law
+        
+        % Inertial stability control force
+        c_i = a.initial_scale(t); % Initial scale of gains
+        f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
+        % Relative position control force
+        f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(pm_dot-a.d_dot(t)));
+        
+        % Platform EOM
+        p_ddot = (f_i+f_pr) / a.m;
+        
+        % Derivative of velocity
+        s_dot(2, 1) = p_ddot; % Inertial acceleration
+        s_dot(5, 1) = pm_ddot; % Measured inertial acceleration
+        
+        % Derivative of measured inertial acceleration
+        s_dot(6, 1) = a.omega*(p_ddot - pm_ddot);
+        
+        % Error in relative position
+        s_dot(3, 1) = pr_err;
+    
+        % Integrate from derivative
+        s_i_fixed(:, 1) = fdm_integrator(s_i_fixed(:, 2), s_dot, dt, type);
+  
+        % Update y_dot_dot
+        s_dot = insert_value(s_dot, s_dot);
+        
+        s_fixed = [s_fixed s_i_fixed(:, 1)];
+        
+        scatter(t, s_fixed(1))
+        hold on
+
+    end
+
 end
