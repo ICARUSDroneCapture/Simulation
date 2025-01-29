@@ -1,5 +1,9 @@
 close all; clear; clc;
 
+rng(1,"twister");
+
+% Use same random seed
+
 set(groot,'DefaultLineLineWidth',1)
 
 simulationParameters;
@@ -21,51 +25,108 @@ specs.T = Tmax / 1;  % Period of deck disturbance [s]
 specs.beta = 2*pi/T; % wave frequency [rad/s]
 
 imx_5_specs
-% gx5_specs
 
 specs.g = a.g;
-% specs.accel_noiseDensity = 0;
-% specs.gyro_noiseDensity = 0;
-% specs.accel_resolution = 0.000001;
-% specs.gyro_resolution = 0.000001;
-% specs.accel_noiseDensity = specs.accel_noiseDensity / 100;
-% specs.gyro_noiseDensity = specs.gyro_noiseDensity / 100;
 a.specs = specs;
 
-% Measured signal
+k = specs.k;
+nonlinearity = specs.dk;
 
-a.n_a = @(t) 0.5*specs.VRW*t.^(-0.5);
-a.n_g = @(t) 0.5*specs.ARW*t.^(-0.5);
-a.theta_err = @(t) specs.b_g*t + specs.ARW*sqrt(t);
+V_err_0 = specs.V_err_0;
+P_err_0 = specs.P_err_0;
 
-a.accel_noise_std = specs.accel_noiseDensity * sqrt(specs.accel_bandwidth); % Noise standard deviation (m/s^2)
-a.gyro_noise_std = specs.gyro_noiseDensity * sqrt(specs.gyro_bandwidth); % Noise standard deviation (dps)
+accel_resolution = specs.accel_resolution;
+accel_samplingRate = specs.accel_samplingRate;
+accel_noiseDensity = specs.accel_noiseDensity;
+accel_bandwidth = specs.accel_bandwidth;
+accel_temp_bias = specs.accel_temp_bias;
 
-% a.accel_quantized = @(t, real_accel) specs.accel_resolution*floor(a.real_accel(t)/specs.accel_resolution);
-% a.gyro_quantized = @(t, real_ang_rate) specs.gyro_resolution*floor(a.real_ang_rate(t)/specs.gyro_resolution);
-% 
-% a.quant_noise_accel = @(t, accel_quantized) a.accel_quantized(t, a.real_accel) + normrnd(0,a.accel_noise_std);
-% a.quant_noise_gyro = @(t, gyro_quantized) a.gyro_quantized(t, a.real_ang_rate) + normrnd(0,a.gyro_noise_std);
+gyro_resolution = specs.gyro_resolution;
+gyro_samplingRate = specs.gyro_samplingRate;
+gyro_noiseDensity = specs.gyro_noiseDensity;
+gyro_bandwidth = specs.gyro_bandwidth;
+gyro_temp_bias = specs.gyro_temp_bias;
 
-% a.drift_error_accel_vert = @(t, n_a, quant_noise_accel, theta_err) (1 + specs.k)*a.quant_noise_accel(t, a.accel_quantized) + specs.b_a + a.n_a(t) + a.g*(1-cos(a.theta_err(t)));
-% a.drift_error_accel_horz = @(t, n_a, quant_noise_accel, theta_err) (1 + specs.k)*a.quant_noise_accel(t, a.accel_quantized) + specs.b_a + a.n_a(t) + a.g*sin(theta_err(t));
-% a.drift_error_gyro = @(t, n_g, quant_noise_gyro, theta_err) (1 + specs.k)*a.quant_noise_gyro(t, a.gyro_quantized) + specs.b_g + a.n_g(t);
+b_a = specs.b_a;
+VRW = specs.VRW;
+b_g = specs.b_g; 
+ARW = specs.ARW;
 
-a.accel_quantized = @(t, p_ddot) specs.accel_resolution*floor(p_ddot/specs.accel_resolution);
-a.gyro_quantized = @(t, p_thetadot) specs.gyro_resolution*floor(p_thetadot/specs.gyro_resolution);
+g = a.g;
 
-a.quant_noise_accel = @(t, accel_quantized, p_ddot) a.accel_quantized(t, p_ddot) + normrnd(0,a.accel_noise_std);
-a.quant_noise_gyro = @(t, gyro_quantized, p_thetadot) a.gyro_quantized(t, p_thetadot) + normrnd(0,a.gyro_noise_std);
+sz = 3;
 
-a.drift_error_accel_vert = @(t, n_a, quant_noise_accel, theta_err, p_ddot) (1 + specs.k)*a.quant_noise_accel(t, a.accel_quantized, p_ddot) + specs.b_a + a.n_a(t) + a.g*(1-cos(a.theta_err(t)));
-a.drift_error_accel_horz = @(t, n_a, quant_noise_accel, theta_err, p_ddot) (1 + specs.k)*a.quant_noise_accel(t, a.accel_quantized, p_ddot) + specs.b_a + a.n_a(t) + a.g*sin(theta_err(t));
-a.drift_error_gyro = @(t, n_g, quant_noise_gyro, theta_err, p_thetadot) (1 + specs.k)*a.quant_noise_gyro(t, a.gyro_quantized, p_thetadot) + specs.b_g + a.n_g(t);
+%% Defining Measured Signal
 
 % Simulation time
-% startTime = T/4;
 startTime = 0;
-finishTime = 10;
+finishTime = 12;
 tspan = [startTime finishTime]; % [s]
+dt = 0.01;  % [s]
+t = (tspan(1):dt:tspan(2))';
+
+% Measured Signal Constants
+
+n_a = 0.5*VRW*t.^(-0.5);
+n_g = 0.5*ARW*t.^(-0.5);
+
+% n_a_std = VRW*sqrt(t(2));
+% n_g_std = ARW*sqrt(t(2));
+
+accel_noise_std = specs.accel_noiseDensity * sqrt(specs.accel_bandwidth); % Noise standard deviation (m/s^2)
+gyro_noise_std = specs.gyro_noiseDensity * sqrt(specs.gyro_bandwidth); % Noise standard deviation (dps)
+
+accel_turn_on_bias_offset = normrnd(0, accel_noise_std);
+gyro_turn_on_bias_offset = normrnd(0, gyro_noise_std);
+
+gyro_tau = 15; % [s]
+accel_tau = 2; % [s]
+
+
+% driftPeriod = 5 * 60;  % drift changes every 5 minutes
+driftPeriod = 1;  % drift changes every 5 seconds
+driftAlterations = floor(tspan(2)/driftPeriod)+1; % drift changes every 5 minutes
+
+b_a_drift_vals = b_a.*rand(driftAlterations,1);
+b_g_drift_vals = b_g.*rand(driftAlterations,1);
+
+% b_a_drift_vals = b_a.*ones(driftAlterations,1);
+% b_g_drift_vals = b_g.*ones(driftAlterations,1);
+
+bias_indeces = floor(t./(length(t)/driftAlterations)*100)+1;
+
+a.biasStabDistAccel = b_a_drift_vals(bias_indeces);
+a.biasStabDistGyro = b_g_drift_vals(bias_indeces);
+
+% Measured Signal Function Handles
+
+a.noiseDistAccel = @(t) accel_noise_std*randn(length(t),1);
+a.noiseDistGyro = @(t) gyro_noise_std*randn(length(t),1);
+
+n_a = @(t) VRW*t.^(0.5);
+n_g = @(t) ARW*t.^(0.5);
+
+a.biasTempDistAccel = @(t) accel_temp_bias*randn(length(t),1);
+a.biasTempDistGyro = @(t) gyro_temp_bias*randn(length(t),1);
+
+a.theta_err = @(t) a.biasStabDistAccel.*t + ARW.*sqrt(t);
+
+a.accel_drift_vert = @(t, real_accel, theta_err) (1 + k)*real_accel(t) + a.biasStabDistAccel + g*(1-cos(theta_err(t)));
+a.accel_drift_horz = @(t, real_accel, theta_err) (1 + k)*real_accel(t) + a.biasStabDistAccel + g*sin(theta_err(t));
+
+a.gyro_drift = @(t, real_ang_rate) (1 + k)*real_ang_rate(t) + a.biasStabDistGyro;
+
+a.o_d_n_a_c_v = @(t, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err) accel_drift_vert(t, real_accel, theta_err) + biasTempDistAccel(t) + noiseDistAccel(t) + accel_turn_on_bias_offset;
+a.o_d_n_a_c_h = @(t, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err) accel_drift_horz(t, real_accel, theta_err) + biasTempDistAccel(t) + noiseDistAccel(t) + accel_turn_on_bias_offset;
+a.o_d_n_g_c = @(t, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_drift(t, real_ang_rate) + biasTempDistGyro(t) + noiseDistGyro(t) + gyro_turn_on_bias_offset;
+
+a.measured_accel_vert = @(t, o_d_n_a_c_v, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err) accel_resolution*floor(o_d_n_a_c_v(t, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err)/accel_resolution);
+a.measured_accel_horz = @(t, o_d_n_a_c_h, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err) accel_resolution*floor(o_d_n_a_c_h(t, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err)/accel_resolution);
+a.measured_gyro = @(t, o_d_n_g_c, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_resolution*floor(o_d_n_g_c(t, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate)/gyro_resolution);
+
+measured_accel_vert = a.measured_accel_vert(t, a.o_d_n_a_c_v, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, a.real_accel, a.theta_err);
+measured_accel_horz = a.measured_accel_horz(t, a.o_d_n_a_c_h, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, a.real_accel, a.theta_err);
+measured_gyro = a.measured_gyro(t, a.o_d_n_g_c, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, a.real_ang_rate);
 
 % Initial States
 p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
@@ -398,11 +459,11 @@ p_thetadot = 1/(pm_dot^2 + 1);
 sz = 3;
 if t > specs.accel_resolution
 
-    measured_a_x = a.drift_error_accel_horz(t, a.n_a, a.quant_noise_accel, a.theta_err, pm_ddot);
+    measured_a_x = a.measured_accel_horz(t, a.o_d_n_a_c_h, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, a.real_accel, a.theta_err);
     measured_a_y = measured_a_x;
-    measured_a_z = a.drift_error_accel_vert(t, a.n_a, a.quant_noise_accel, a.theta_err, pm_ddot);
+    measured_a_z = a.measured_accel_vert(t, a.o_d_n_a_c_v, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, a.real_accel, a.theta_err);
 
-    measured_g_x = a.drift_error_gyro(t, a.n_g, a.quant_noise_gyro, a.theta_err, p_thetadot);
+    measured_g_x = a.measured_gyro(t, a.o_d_n_g_c, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, a.real_ang_rate);
     measured_g_y = measured_g_x;
     measured_g_z = measured_g_x;
 
@@ -458,12 +519,16 @@ pr_err = pr-a.pr_d;
 
 % Control gain proportions
 
-I = a.I(pr); % Proportion of inertial stability control to apply
+% I = a.I(pr); % Proportion of inertial stability control to apply
+I = 0.5;
+
 ka = a.ka*I; % Acceleration [kg]
 kv = a.kv*I; % Velocity     [kg/s]
 ks = a.ks*I; % Position     [kg*s^-2]
 
-k = a.K(pr);     % Proportion of relative position control to apply
+% k = a.K(pr);     % Proportion of relative position control to apply
+k = 0.5;
+
 k_h = a.K_h(pr);
 kp = a.kp*k_h;     % Proportional [kg*s^-2]
 kd = a.kd*k_h;     % Derivative   [kg/s]
@@ -555,7 +620,7 @@ function state = compensateError(measuredState, specs, time)
     ACCEL_BIAS = [b_a b_a b_a]';
     GYRO_BIAS = [b_g b_g b_g]';
 
-    theta_err = b_g*time + ARW*sqrt(time);
+    theta_err = b_g/2*time + ARW*sqrt(time);
 
     a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1) - g*sin(theta_err);
     a_adjusted_z = measured_accel(3) - ACCEL_BIAS(3) - g*(1-cos(theta_err));

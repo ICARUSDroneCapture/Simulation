@@ -62,22 +62,7 @@ a.a_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1); %
 
 % Inertial Stabilization Control
 
-% Precise, unpredictable
-% a.ka =  0.98;  % Acceleration Control [kg]
-% a.kv = 80;  % Velocity Control [kg/s]
-% a.ks = 0;  % Position Control [kg*s^-2] 
-
-% Less precise, predictable
-a.ka =  0.0001;  % Acceleration Control [kg]
-a.kv = 2.8;  % Velocity Control [kg/s]
-a.ks = 0;  % Position Control [kg*s^-2] 
-
-% Relative Position Control
-a.kp = 7;  % Proportional [kg*s^-2]
-a.kd = 50;  % Derivative [kg/s]    
-a.ki = 2;  % Integral [kg*s^-3]
-
-% % Inertial Stabilization Control
+% Inertial Stabilization Control
 % a.ka = 700;  % Acceleration Control [kg]
 % a.kv = 5000;  % Velocity Control [kg/s]
 % a.ks = 0;  % Position Control [kg*s^-2] 
@@ -86,6 +71,21 @@ a.ki = 2;  % Integral [kg*s^-3]
 % a.kp = 3000;  % Proportional [kg*s^-2]
 % a.kd = 500;  % Derivative [kg/s]    
 % a.ki = 200;  % Integral [kg*s^-3] 
+
+% Inertial Stabilization Control
+a.ka =  10;  % Acceleration Control [kg]
+% a.kv = 2.8;  % Velocity Control [kg/s]
+a.kv = 0;  % Velocity Control [kg/s]
+a.ks = 0;  % Position Control [kg*s^-2]
+
+% a.ka =  1;  % Acceleration Control [kg]
+% a.kv = 0;  % Velocity Control [kg/s]
+% a.ks = 0;  % Position Control [kg*s^-2] 
+% 
+% % Relative Position Control
+a.kp = 70;  % Proportional [kg*s^-2]
+a.kd = 500;  % Derivative [kg/s]    
+a.ki = 0;  % Integral [kg*s^-3]
 
 % Low-Pass filter on measured acceleration
 a.f_c = 1000; % Cutoff frequency [Hz]

@@ -24,22 +24,22 @@ dt = single(dt);
 switch integrator_type
     case 1
         % Rectangular-Euler
-        output_value_local = output(:, 1) + dt*val_dot(:, 1);
+        output_value_local = output(1, :) + dt*val_dot(1, :);
     case 2
         % Trapezoidal with Half Step
-        current_val_dot = 2.0 * val_dot(:, 1) - val_dot(:, 2);
-        output_value_local = output(:, 1) + (0.5*dt*(current_val_dot + val_dot(:, 1)));
+        current_val_dot = 2.0 * val_dot(1, :) - val_dot(2, :);
+        output_value_local = output(1, :) + (0.5*dt*(current_val_dot + val_dot(1, :)));
     case 3
         % Trapezoidal
-        output_value_local = output(:, 1) + (0.5*dt*(val_dot(:, 1) + val_dot(:, 2)));
+        output_value_local = output(1, :) + (0.5*dt*(val_dot(1, :) + val_dot(2, :)));
     case 4
         % Adams-Bashforth 2 Step
-        current_val_dot = 2.0 * val_dot(:, 1) - val_dot(:, 2);
-        output_value_local = output(1) + (dt*((1.5*current_val_dot) - (0.5*val_dot(:, 1))));
+        current_val_dot = 2.0 * val_dot(1, :) - val_dot(2, :);
+        output_value_local = output(1, :) + (dt*((1.5*current_val_dot) - (0.5*val_dot(1, :))));
     case 5
         % Adams-Bashforth 3 Step
-        current_val_dot = 2.0 * val_dot(:, 1) - val_dot(:, 2);
-        output_value_local = output(:, 1) + ((1.0/12.0)*dt*((23.0*current_val_dot) - (16.0*val_dot(:, 1)) + (5.0*val_dot(:, 2))));
+        current_val_dot = 2.0 * val_dot(1, :) - val_dot(2, :);
+        output_value_local = output(1, :) + ((1.0/12.0)*dt*((23.0*current_val_dot) - (16.0*val_dot(1, :)) + (5.0*val_dot(2, :))));
     case 6
         % Adams-Bashforth 4 Step (TODO)
         output_value_local = 0;

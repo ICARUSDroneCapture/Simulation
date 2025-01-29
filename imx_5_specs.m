@@ -7,11 +7,13 @@ specs.accel_resolution = 0.122 / 1000 * a.g; % m/s
 specs.accel_samplingRate = 4000; % Hz
 specs.accel_noiseDensity = 60 * 10^-6 * a.g; % m/s^2/sqrt(Hz)
 specs.accel_bandwidth = 218; % Hz
+specs.accel_temp_bias = 3.7 / 1000 * 9.81; % m/s^2 RMS
 
 specs.gyro_resolution = 0.0076; % deg/s
 specs.gyro_samplingRate = 8000; % Hz
 specs.gyro_noiseDensity = 5 * 10^-3; % dps/sqrt(Hz)
 specs.gyro_bandwidth = 250; % Hz
+specs.gyro_temp_bias = 0.3; % dps RMS
 
 % Accel Specs
 specs.b_a = 0.019 / 1000 * a.g; % Time Varying Bias (m/s^-2)
