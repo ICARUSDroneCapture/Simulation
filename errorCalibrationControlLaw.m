@@ -60,7 +60,7 @@ sz = 3;
 
 % Simulation time
 startTime = 0;
-finishTime = 10;
+finishTime = 30;
 tspan = [startTime finishTime]; % [s]
 dt = 0.01;  % [s]
 t = (tspan(1):dt:tspan(2))';
@@ -82,21 +82,40 @@ gyro_turn_on_bias_offset = normrnd(0, gyro_noise_std);
 gyro_tau = 15; % [s]
 accel_tau = 2; % [s]
 
-
 % driftPeriod = 5 * 60;  % drift changes every 5 minutes
 driftPeriod = 2;  % drift changes every 5 seconds
 driftAlterations = floor(tspan(2)/driftPeriod)+1; % drift changes every 5 minutes
 
-% b_a_drift_vals = b_a.*rand(driftAlterations,1);
-% b_g_drift_vals = b_g.*rand(driftAlterations,1);
+b_a_drift_vals = b_a.*rand(driftAlterations,1);
+b_g_drift_vals = b_g.*rand(driftAlterations,1);
 
-b_a_drift_vals = b_a.*ones(driftAlterations,1);
-b_g_drift_vals = b_g.*ones(driftAlterations,1);
+% b_a_drift_vals = b_a.*ones(driftAlterations,1);
+% b_g_drift_vals = b_g.*ones(driftAlterations,1);
 
 bias_indeces = floor(t./(length(t)/driftAlterations)*100)+1;
 
 a.biasStabDistAccel = b_a_drift_vals(bias_indeces);
 a.biasStabDistGyro = b_g_drift_vals(bias_indeces);
+
+re
+subplot(2,1,1)
+plot(t, a.biasStabDistAccel);
+hold on
+yline(b_a)
+hold on
+yline(-b_a)
+xlabel('Time (sec)')
+ylabel('Acceleration (m/s^2)')
+title('Accelerometer Bias Offset Model')
+subplot(2,1,2)
+plot(t, a.biasStabDistGyro);
+hold on
+yline(b_g)
+hold on
+yline(-b_g)
+xlabel('Time (sec)')
+ylabel('Angular Rate (m/s^2)')
+title('Gyroscope Bias Offset Model')
 
 % Measured Signal Function Handles
 
@@ -139,13 +158,6 @@ p_theta0 = a.real_ang(tspan(1)); % Platform inertial angle [deg]
 
 s0 = [p0; p_dot0; pr_err_accum0; pm0; pm_dot; pm_ddot];
 
-% Plotting readl disturbance vs measured disturbance
-
-figure
-a.fi1 = axes;
-xlabel('Time (s)')
-ylabel('Drift (m/s^-2)')
-title('Vertical Accelerometer Signal vs Time')
 %% Running simulations
 
 % --------------------- Running no error simulation -----------------------
@@ -527,9 +539,9 @@ kv = a.kv*I; % Velocity     [kg/s]
 ks = a.ks*I; % Position     [kg*s^-2]
 
 k = a.K(pr);     % Proportion of relative position control to apply
-% k = 0.5;
-
 k_h = a.K_h(pr);
+% k_h =  0.5;
+
 kp = a.kp*k_h;     % Proportional [kg*s^-2]
 kd = a.kd*k_h;     % Derivative   [kg/s]
 ki = a.ki*k_h;     % Integral     [kg*s^-3]
@@ -620,15 +632,15 @@ function state = compensateError(measuredState, specs, time)
     ACCEL_BIAS = [b_a b_a b_a]';
     GYRO_BIAS = [b_g b_g b_g]';
 
-    % theta_err = b_g/2*time + ARW*sqrt(time);
-    theta_err = b_g*time + ARW*sqrt(time);
+    theta_err = b_g/2*time + ARW*sqrt(time);
+    % theta_err = b_g*time + ARW*sqrt(time);
 
     a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1) - g*sin(theta_err);
     a_adjusted_z = measured_accel(3) - ACCEL_BIAS(3) - g*(1-cos(theta_err));
     a_adjusted = [a_adjusted_x_y; a_adjusted_x_y; a_adjusted_z];
 
     % Adding calibration error of up to 2 bits of accuracy
-    a_adjusted = a_adjusted - 2*accel_resolution;
+    a_adjusted = a_adjusted + 2*accel_resolution*randn(1);
     
     A_FIX = inv([1+S_x+dS_x  M_xy       M_xz
                 M_yx         1+S_y+dS_y M_yz
@@ -644,7 +656,7 @@ function state = compensateError(measuredState, specs, time)
     g_adjusted = measured_gyro - GYRO_BIAS - G_DEP_BIAS*corrected_a;
     
     % Adding calibration error of up to 2 bits of accuracy
-    g_adjusted = g_adjusted - 2*gyro_resolution;
+    g_adjusted = g_adjusted + 2*gyro_resolution*randn(1);
 
     corrected_g = A_FIX * g_adjusted;
 
@@ -731,7 +743,7 @@ s_dot(2) = p_ddot; % Inertial acceleration
 s_dot(5) = pm_ddot; % Measured inertial acceleration
 
 % Derivative of measured inertial acceleration
-s_dot(6) = a.omega*(p_ddot - pm_ddot) ;
+s_dot(6) = a.omega*(p_ddot - pm_ddot);
 
 % Error in relative position
 s_dot(3) = pr_err;
@@ -773,97 +785,3 @@ function states = KalmanFilter(t, signal, noise_std, q)
     end
 end
 
-function s_fixed = fixedIntegration(s_i_fixed, dt, tspan, type, a)
-    startTime = tspan(1);
-    finishTime = tspan(2);
-
-    s_fixed = [];
-
-    % Derivative of states
-    s_dot = zeros(size(s_i_fixed));
-
-    figure
-    hold on
-
-    for t=startTime:dt:finishTime
-        t
-    
-        % Current states
-        p = s_i_fixed(1, 1);
-        p_dot = s_i_fixed(2, 1);
-        pr_err_accum = s_i_fixed(3, 1);
-        pm = s_i_fixed(4, 1);
-        pm_dot = s_i_fixed(5, 1);
-        pm_ddot = s_i_fixed(6, 1);
-        
-        % Error in relative position (distance to center of operation region)
-        pr = pm-a.d(t);
-        pr_err = pr-a.pr_d;
-        
-        % For testing gains without mixing proportions
-        % ka = a.ka; % Acceleration [kg]
-        % kv = a.kv; % Velocity     [kg/s]
-        % ks = a.ks; % Position     [kg*s^-2]
-        % kp = a.kp; % Proportional [kg*s^-2]
-        % kd = a.kd; % Derivative   [kg/s]
-        % ki = a.ki; % Integral     [kg*s^-3]
-        
-        % Control gain proportions
-        
-        I = a.I(pr); % Proportion of inertial stability control to apply
-        ka = a.ka*I; % Acceleration [kg]
-        kv = a.kv*I; % Velocity     [kg/s]
-        ks = a.ks*I; % Position     [kg*s^-2]
-        
-        k = a.K(pr);     % Proportion of relative position control to apply
-        k_h = a.K_h(pr);
-        kp = a.kp*k_h;     % Proportional [kg*s^-2]
-        kd = a.kd*k_h;     % Derivative   [kg/s]
-        ki = a.ki*k_h;     % Integral     [kg*s^-3]
-        
-        % Derivative of position
-        s_dot(1, 1) = p_dot;  % inertial velocity
-        s_dot(4, 1) = pm_dot; % measured inertial velocity
-        
-        % Control Law
-        
-        % Inertial stability control force
-        c_i = a.initial_scale(t); % Initial scale of gains
-        f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
-        % Relative position control force
-        f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(pm_dot-a.d_dot(t)));
-        
-        % Platform EOM
-        p_ddot = (f_i+f_pr) / a.m;
-        
-        % Derivative of velocity
-        s_dot(2, 1) = p_ddot; % Inertial acceleration
-        s_dot(5, 1) = pm_ddot; % Measured inertial acceleration
-        
-        % Derivative of measured inertial acceleration
-        s_dot(6, 1) = a.omega*(p_ddot - pm_ddot);
-        
-        % Error in relative position
-        s_dot(3, 1) = pr_err;
-    
-        % Integrate from derivative
-        s_i_fixed(:, 1) = fdm_integrator(s_i_fixed(:, 2), s_dot, dt, type);
-        
-        s_i_fixed
-        s_dot
-
-        % Update y_dot_dot
-        s_dot = insert_value(s_dot, s_dot(:,1));
-
-        s_dot
-
-        % U = insert_value(U, fdm_integrator(U, U_dot, dt, 2)); 
-        
-        s_fixed = [s_fixed s_i_fixed(:, 1)];
-        
-        scatter(t, s_fixed(1))
-        hold on
-
-    end
-
-end

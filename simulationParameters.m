@@ -8,7 +8,7 @@ a.pr_d = 0.5; % Desired relative position [m]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Environmental Model %%%%%%%%%%%%%%%%%%%%
 
-alpha = 0.4; % wave amplitdue [m]
+alpha = 0.5; % wave amplitdue [m]
 hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
 
 % Wave frequency
@@ -50,8 +50,8 @@ a.d_ddot = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
 % a.d_ddot = @(t) -alpha*(0.0417*beta^2*sin(beta*t/6) ...
 %                                     + 0.75*beta^2*sin(beta*t)); % [m*s^-2]
 
-a.a = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
-a.a_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1); % [rad]
+a.a = @(t) atand(beta*alpha*cosd(beta*t)); % [rad]
+a.a_dot = @(t) -(alpha*beta^2*sind(beta*t))/(alpha^2*beta^2*(cosd(beta*t)^2)+1); % [rad]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%% Control Gains %%%%%%%%%%%%%%%%%%%%%%%
@@ -66,13 +66,13 @@ a.a_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1); %
 % a.ks = 0;  % Position Control [kg*s^-2] 
 
 % Relative Position Control
-a.kp = 3000;  % Proportional [kg*s^-2]
-a.kd = 500;  % Derivative [kg/s]    
-a.ki = 200;  % Integral [kg*s^-3] 
+a.kp = 300;  % Proportional [kg*s^-2]
+a.kd = 50;  % Derivative [kg/s]    
+a.ki = 20;  % Integral [kg*s^-3] 
 
 % Inertial Stabilization Control
-a.ka =  10;  % Acceleration Control [kg]
-a.kv = 80;  % Velocity Control [kg/s]
+a.ka =  1;  % Acceleration Control [kg]
+a.kv = 2;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2]
 
 % % Inertial Stabilization Control
