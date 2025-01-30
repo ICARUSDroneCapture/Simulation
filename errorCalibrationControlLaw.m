@@ -60,7 +60,7 @@ sz = 3;
 
 % Simulation time
 startTime = 0;
-finishTime = 12;
+finishTime = 10;
 tspan = [startTime finishTime]; % [s]
 dt = 0.01;  % [s]
 t = (tspan(1):dt:tspan(2))';
@@ -84,14 +84,14 @@ accel_tau = 2; % [s]
 
 
 % driftPeriod = 5 * 60;  % drift changes every 5 minutes
-driftPeriod = 1;  % drift changes every 5 seconds
+driftPeriod = 2;  % drift changes every 5 seconds
 driftAlterations = floor(tspan(2)/driftPeriod)+1; % drift changes every 5 minutes
 
-b_a_drift_vals = b_a.*rand(driftAlterations,1);
-b_g_drift_vals = b_g.*rand(driftAlterations,1);
+% b_a_drift_vals = b_a.*rand(driftAlterations,1);
+% b_g_drift_vals = b_g.*rand(driftAlterations,1);
 
-% b_a_drift_vals = b_a.*ones(driftAlterations,1);
-% b_g_drift_vals = b_g.*ones(driftAlterations,1);
+b_a_drift_vals = b_a.*ones(driftAlterations,1);
+b_g_drift_vals = b_g.*ones(driftAlterations,1);
 
 bias_indeces = floor(t./(length(t)/driftAlterations)*100)+1;
 
@@ -109,7 +109,7 @@ n_g = @(t) ARW*t.^(0.5);
 a.biasTempDistAccel = @(t) accel_temp_bias*randn(length(t),1);
 a.biasTempDistGyro = @(t) gyro_temp_bias*randn(length(t),1);
 
-a.theta_err = @(t) a.biasStabDistAccel.*t + ARW.*sqrt(t);
+a.theta_err = @(t) a.biasStabDistGyro.*t + ARW.*sqrt(t);
 
 a.accel_drift_vert = @(t, real_accel, theta_err) (1 + k)*real_accel(t) + a.biasStabDistAccel + g*(1-cos(theta_err(t)));
 a.accel_drift_horz = @(t, real_accel, theta_err) (1 + k)*real_accel(t) + a.biasStabDistAccel + g*sin(theta_err(t));
@@ -519,15 +519,15 @@ pr_err = pr-a.pr_d;
 
 % Control gain proportions
 
-% I = a.I(pr); % Proportion of inertial stability control to apply
-I = 0.5;
+I = a.I(pr); % Proportion of inertial stability control to apply
+% I = 0.5;
 
 ka = a.ka*I; % Acceleration [kg]
 kv = a.kv*I; % Velocity     [kg/s]
 ks = a.ks*I; % Position     [kg*s^-2]
 
-% k = a.K(pr);     % Proportion of relative position control to apply
-k = 0.5;
+k = a.K(pr);     % Proportion of relative position control to apply
+% k = 0.5;
 
 k_h = a.K_h(pr);
 kp = a.kp*k_h;     % Proportional [kg*s^-2]
@@ -620,7 +620,8 @@ function state = compensateError(measuredState, specs, time)
     ACCEL_BIAS = [b_a b_a b_a]';
     GYRO_BIAS = [b_g b_g b_g]';
 
-    theta_err = b_g/2*time + ARW*sqrt(time);
+    % theta_err = b_g/2*time + ARW*sqrt(time);
+    theta_err = b_g*time + ARW*sqrt(time);
 
     a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1) - g*sin(theta_err);
     a_adjusted_z = measured_accel(3) - ACCEL_BIAS(3) - g*(1-cos(theta_err));
