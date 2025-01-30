@@ -39,7 +39,7 @@ a.real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos
 
 % Simulation time
 startTime = 0;
-finishTime = 50;
+finishTime = 10;
 tspan = [startTime finishTime]; % [s]
 dt = 0.01;  % [s]
 t = (tspan(1):dt:tspan(2))';
@@ -267,14 +267,14 @@ accel_tau = 20; % [s]
 driftPeriod = 2;  % drift changes every 5 seconds
 driftAlterations = floor(tspan(2)/driftPeriod)+1; % drift changes every 5 minutes
 
-% b_a_drift_vals = b_a.*ones(driftAlterations,1);
-% b_g_drift_vals = b_g.*ones(driftAlterations,1);
+b_a_drift_vals = b_a.*ones(driftAlterations,1);
+b_g_drift_vals = b_g.*ones(driftAlterations,1);
 
 % a.biasStabDistAccel = @(t) b_a*(1-exp(-t/accel_tau));
 % a.biasStabDistGyro = @(t) b_g*(1-exp(-t/gyro_tau));
 
-b_a_drift_vals = b_a.*rand(driftAlterations,1);
-b_g_drift_vals = b_g.*rand(driftAlterations,1);
+% b_a_drift_vals = b_a.*rand(driftAlterations,1);
+% b_g_drift_vals = b_g.*rand(driftAlterations,1);
 
 bias_indeces = floor(t./(length(t)/driftAlterations)*100)+1;
 
@@ -318,8 +318,11 @@ title('Gyroscope Bias Offset Model')
 
 % Bias Error over Temp
 
-a.biasTempDistAccel = @(t) accel_temp_bias*randn(length(t),1);
-a.biasTempDistGyro = @(t) gyro_temp_bias*randn(length(t),1);
+% a.biasTempDistAccel = @(t) accel_temp_bias*randn(length(t),1);
+% a.biasTempDistGyro = @(t) gyro_temp_bias*randn(length(t),1);
+
+a.biasTempDistAccel = @(t) 0;
+a.biasTempDistGyro = @(t) 0;
 
 figure
 subplot(1,2,1)
@@ -1033,7 +1036,8 @@ function state = compensateError(measuredState, specs, time)
     ACCEL_BIAS = [b_a b_a b_a]';
     GYRO_BIAS = [b_g b_g b_g]';
 
-    theta_err = b_g/2*time + ARW*sqrt(time);
+    % theta_err = b_g/2*time + ARW*sqrt(time);
+    theta_err = b_g*time + ARW*sqrt(time);
 
     a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1) - g*sin(theta_err);
     a_adjusted_z = measured_accel(3) - ACCEL_BIAS(3) - g*(1-cos(theta_err));

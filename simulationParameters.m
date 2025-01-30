@@ -66,9 +66,9 @@ a.a_dot = @(t) -(alpha*beta^2*sind(beta*t))/(alpha^2*beta^2*(cosd(beta*t)^2)+1);
 % a.ks = 0;  % Position Control [kg*s^-2] 
 
 % Relative Position Control
-a.kp = 300;  % Proportional [kg*s^-2]
-a.kd = 50;  % Derivative [kg/s]    
-a.ki = 20;  % Integral [kg*s^-3] 
+a.kp = 10;  % Proportional [N/m]
+a.kd = 2;  % Derivative [Ns/m]    
+a.ki = 0;  % Integral [N/ms]
 
 % Inertial Stabilization Control
 a.ka =  1;  % Acceleration Control [kg]
