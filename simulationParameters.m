@@ -63,11 +63,11 @@ a.d_ddot = @(t) -beta^2*alpha*cos(beta*t); % [m*s^-2]
 
 % Inertial Stabilization Control
 a.ka = 700;  % Acceleration Control [kg]
-a.kv = 5000;  % Velocity Control [kg/s]
+a.kv = 0;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2] 
 
 % Relative Position Control
-a.kp = 3000;  % Proportional [kg*s^-2]
+a.kp = 3300;  % Proportional [kg*s^-2]
 a.kd = 500;  % Derivative [kg/s]    
 a.ki = 200;  % Integral [kg*s^-3] 
 
@@ -138,3 +138,52 @@ t_s = 2;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+out = sim("Control1DOF.slx",'StopTime', '30');
+
+t = out.tout;
+p = out.p.Data;
+p_dot = out.p_dot.Data;
+p_ddot = out.p_ddot.Data;
+pr = out.pr.Data;
+
+% % Position
+% figure;
+% plot(t,p)
+% hold on
+% plot(t,a.d(t))
+% title('Inertial Position vs Time')
+% xlabel('Time (s)')
+% ylabel('Position (m)')
+% legend('Platform', 'Deck','Location','southeast')
+% 
+% % Velocity
+% figure;
+% plot(t,p_dot)
+% hold on
+% plot(t,a.d_dot(t))
+% title('Inertial Velocity vs Time')
+% xlabel('Time (s)')
+% ylabel('Velocity (m/s)')
+% legend('Platform', 'Deck','Location','southeast')
+% 
+% % Acceleration
+% figure;
+% plot(t,p_ddot)
+% hold on
+% plot(t,a.d_ddot(t))
+% yline(p_ddot_max,'--')
+% yline(-p_ddot_max,'--')
+% title('Inertial Acceleration vs Time')
+% xlabel('Time (s)')
+% ylabel('Acceleration (m/s^2)')
+% legend('Platform', 'Deck','Location','southeast')
+% 
+% 
+% % Plotting relative position
+% figure;
+% plot(t,pr)
+% yline(a.pr_d,'--','Label','$p_{rd}$','Interpreter','latex','FontSize',15)
+% title('Relative Position vs Time')
+% xlabel('Time (s)')
+% ylabel('Position (m)')
