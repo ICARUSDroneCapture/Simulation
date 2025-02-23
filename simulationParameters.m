@@ -1,4 +1,4 @@
-close all; clear; clc;
+  close all; clear; clc;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%% Arm Parameters %%%%%%%%%%%%%%%%%%%%%%%
@@ -6,14 +6,14 @@ close all; clear; clc;
 a.m = 5;    % Mass [kg]
 a.g = 9.81; % Acceleration of gravity [m/s^2]
 global f_comp
-m0 = 5;    % Initial mass guess [kg]
+m0 = 0;    % Initial mass guess [kg]
 f_comp = m0*a.g; % Gravity compensation force mass [N]
 a.pr_d = 0.5; % Desired relative position [m]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Environmental Model %%%%%%%%%%%%%%%%%%%%
 
-alpha = 0.4; % wave amplitdue [m]
+alpha = 0.35; % wave amplitdue [m]
 hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
 
 % Wave frequency
@@ -62,15 +62,22 @@ a.d_ddot = @(t) -beta^2*alpha*cos(beta*t); % [m*s^-2]
 %   a.ka = 2800; a.kv = ?; a.ks = ?;
 %   a.kp = 300; a.kd = 50; a.ki = 100;
 
+scale = 1;
+
 % Inertial Stabilization Control
-a.ka = 700;  % Acceleration Control [kg]
-a.kv = 5000;  % Velocity Control [kg/s]
+a.ka = scale*18000;  % Acceleration Control [kg]
+a.kv = 0;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2] 
 
-% Relative Position Control
-a.kp = 3000;  % Proportional [kg*s^-2]
-a.kd = 500;  % Derivative [kg/s]    
-a.ki = 200;  % Integral [kg*s^-3] 
+% Relative Position Control at center
+a.kp_c = scale*400;  % Proportional [kg*s^-2]
+a.kd_c = scale*9000;  % Derivative [kg/s]    
+a.ki_c = scale*0;  % Integral [kg*s^-3] 
+
+% Relative Position Control at boundaries
+a.kp_b = scale*0;  % Proportional [kg*s^-2]
+a.kd_b = scale*0;  % Derivative [kg/s]    
+a.ki_b = scale*0;  % Integral [kg*s^-3] 
 
 % Progressively Increase inertial stability gains to full gains so initial
 % large values of velocity and acceleration do not cause large control
@@ -90,17 +97,18 @@ a.r_g = 0.4; % [m]
 
 % If |pr-pr_d| <= r_k, apply "h_k" proportion of relative position control
 a.r_k = 0.4; % [m]
-a.h_k = 0.0; % Proportion of applied relative position control
+a.h_k = 0.5; % Proportion of applied relative position control
 
-% Proportion of applied inertial stabilitycontrol
+% Proportion of applied inertial stability and relative position control
+% in the center
 n = 1; % Polynomial order
-a.I = @(x) ...
+a.C = @(x) ...
     ((-1/(1-(a.pr_d+a.r_g))^n) * ...
         (sign(x-a.pr_d).*(x-(a.pr_d+sign(x-a.pr_d)*a.r_g))).^n + 1) .* ...
             (abs(x-a.pr_d)> a.r_g) ...
     + 1 * (abs(x-a.pr_d) <= a.r_g);
 
-% Proportion of applied relative position control
+% Proportion of applied boundary relative position control
 n = 1; % Polynomial order
 a.K = @(x) ...
     (-((a.h_k-1)/(1-(a.pr_d+a.r_k))^n) * ...
@@ -111,21 +119,21 @@ a.K = @(x) ...
 %%%               Gain Mixing Visualization               %%%
 
 pr = linspace(0,1,1000); % relative position test values
-inert_gain = a.I(pr); % Proportion of inertial control gain
-rel_gain = a.K(pr); % Proportion of relative position control gain
+cent_gain = a.C(pr); % Proportion of center control gain
+boundary_gain = a.K(pr); % Proportion of boundary control gain
 
 figure;
-plot(pr,inert_gain)
+plot(pr,cent_gain)
 hold on
-plot(pr, rel_gain)
+plot(pr, boundary_gain)
 xline(a.pr_d,'--','Label','$p_{rd}$','Interpreter','latex','FontSize',15,...
     'LabelOrientation','horizontal','LabelVerticalAlignment','middle')
-title('Inertial and Relative Positional Control Mixing')
+title('Center and Boundary Control Mixing')
 xlabel('Relative Position (m)')
 ylabel('Gain Proportion')
 xlim([-0.1 1.1])
 ylim([-0.1 1.1])
-legend('Inertial','Relative')
+legend('Center','Boundary')
 grid on
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
