@@ -13,19 +13,20 @@ s0 = [p0; p_dot0; pr_err_accum0];
 % Running Simulation
 lastwarn('')
 op = odeset('RelTol',1e-5,'AbsTol',1e-5); % Tolerance options
-[t, s] = ode45(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
-% try
 % [t, s] = ode45(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
-% catch ME
-%     if strcmp(ME.identifier, warnId)
-%         disp(beta)
-%         disp(['Solver stopped due to tolerance failure at t = ', num2str(ME.stack(1).line)]);
-% 
-%     else
-%         % Something else has gone wrong: just re-throw the error
-%         throw(ME);
-%     end
-% end
+try
+[t, s] = ode45(@(t,s)rigidArmControl(t,s,a),tspan,s0,op);
+catch ME
+    if strcmp(ME.identifier, warnId)
+        % disp(beta)
+        % disp(['Solver stopped due to tolerance failure at t = ', num2str(ME.stack(1).line)]);
+        t = 0;
+
+    else
+        % Something else has gone wrong: just re-throw the error
+        throw(ME);
+    end
+end
 
 % Plotting Position vs Time and Acceleration vs Time
 
@@ -90,20 +91,3 @@ op = odeset('RelTol',1e-5,'AbsTol',1e-5); % Tolerance options
 % xlabel('Time (s)')
 % ylabel('Position (m)')
 % legend('','Full Inertial','Relative Position','')
-
-function status = intWarning(t, y, flag)
-    status = 0;  % Continue by default
-
-    if strcmp(flag, 'init') % Solver initialization
-        return;
-    elseif strcmp(flag, 'done') % Solver finished
-        return;
-    else
-        [warnMsg, warnId] = lastwarn;
-        disp(warnMsg)
-        if ~isempty(warnMsg) && contains(warnMsg, 'Unable to meet integration tolerances')
-            disp(['Solver stopped due to tolerance failure at t = ', num2str(tChunk(end))]);
-            status = 1;
-        end
-    end
-end

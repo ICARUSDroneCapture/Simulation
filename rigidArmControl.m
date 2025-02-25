@@ -19,11 +19,6 @@ function s_dot = rigidArmControl(t, s, a)
 %                  acceleration of the platform,and pr_err is the error in 
 %                  the relative position of the platform
 
-% Compensation force to account for interfering control forces
-% (When control forces cause non-zero steady state velocity with zero
-% acceleration)
-global f_comp
-
 % Current states
 p = s(1);
 p_dot = s(2);
@@ -33,29 +28,25 @@ pr_err_accum = s(3);
 pr = p-a.d(t);
 pr_err = pr-a.pr_d;
 
-% For testing gains without mixing proportions
+% % For testing gains without mixing proportions
 % I = 1;
 % ka = a.ka; % Acceleration [kg]
 % kv = a.kv; % Velocity     [kg/s]
 % ks = a.ks; % Position     [kg*s^-2]
-% kp = a.kp; % Proportional [kg*s^-2]
-% kd = a.kd; % Derivative   [kg/s]
-% ki = a.ki; % Integral     [kg*s^-3]
+% kp = a.kp_b; % Proportional [kg*s^-2]
+% kd = a.kd_b; % Derivative   [kg/s]
+% ki = a.ki_b; % Integral     [kg*s^-3]
 
-% Control gain proportions
-c_i = a.int_scale_i(t); % Initial scale of intertial stability gains
-c_k = a.int_scale_k(t); % Initial scale of relative position gains
-
-C = a.C(pr)*c_i; % Proportion of inertial stability control to apply
+C = a.C(pr);
 ka = a.ka*C; % Acceleration [kg]
 kv = a.kv*C; % Velocity     [kg/s]
 ks = a.ks*C; % Position     [kg*s^-2]
 
 % Proportion of relative position control
-k = max(a.K(pr),c_k); 
-kp = a.kp_c*C + a.kp_b*k; % Proportional [kg*s^-2]
-kd = a.kd_c*C + a.kd_b*k; % Derivative   [kg/s]
-ki = a.ki_c*C + a.ki_b*k; % Integral     [kg*s^-3]
+B = a.B(pr);
+kp = a.kp_c*C + a.kp_b*B; % Proportional [kg*s^-2]
+kd = a.kd_c*C + a.kd_b*B; % Derivative   [kg/s]
+ki = a.ki_c*C + a.ki_b*B; % Integral     [kg*s^-3]
 
 % Derivative of states
 s_dot = zeros(3,1);
@@ -67,11 +58,7 @@ s_dot(1) = p_dot;
 f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(p_dot-a.d_dot(t)));
 
 % Inertial Acceleration
-s_dot(2) = (-kv*p_dot - ks*p + f_pr - a.m*a.g + f_comp) / (a.m + ka);
-% abs(s_dot(2)) < 1e-3 && p_dot > 1e-3
-% if ( (abs(s_dot(2)) < 1e-7) && (abs(p_dot) > 1e-8) && (I == 1))
-%     f_comp = -kv*p_dot + f_comp;
-% end
+s_dot(2) = (-kv*p_dot - ks*p + f_pr - a.m*a.g) / (a.m + ka);
 
 % Error in relative position
 s_dot(3) = pr_err;

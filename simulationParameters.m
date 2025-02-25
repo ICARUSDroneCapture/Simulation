@@ -5,15 +5,12 @@
 
 a.m = 5;    % Mass [kg]
 a.g = 9.81; % Acceleration of gravity [m/s^2]
-global f_comp
-m0 = 0;    % Initial mass guess [kg]
-f_comp = m0*a.g; % Gravity compensation force mass [N]
 a.pr_d = 0.5; % Desired relative position [m]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Environmental Model %%%%%%%%%%%%%%%%%%%%
 
-alpha = 0.35; % wave amplitdue [m]
+alpha = 0.3; % wave amplitdue [m]
 hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
 
 % Wave frequency
@@ -65,29 +62,19 @@ a.d_ddot = @(t) -beta^2*alpha*cos(beta*t); % [m*s^-2]
 scale = 1;
 
 % Inertial Stabilization Control
-a.ka = scale*18000;  % Acceleration Control [kg]
+a.ka = scale*0;  % Acceleration Control [kg]
 a.kv = 0;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2] 
 
 % Relative Position Control at center
-a.kp_c = scale*400;  % Proportional [kg*s^-2]
-a.kd_c = scale*9000;  % Derivative [kg/s]    
+a.kp_c = scale*0;  % Proportional [kg*s^-2]
+a.kd_c = scale*0;  % Derivative [kg/s]    
 a.ki_c = scale*0;  % Integral [kg*s^-3] 
 
 % Relative Position Control at boundaries
-a.kp_b = scale*0;  % Proportional [kg*s^-2]
-a.kd_b = scale*0;  % Derivative [kg/s]    
-a.ki_b = scale*0;  % Integral [kg*s^-3] 
-
-% Progressively Increase inertial stability gains to full gains so initial
-% large values of velocity and acceleration do not cause large control
-% forces
-s0 = 0;  % Inital proportion of gain values to apply
-gain_rate = 0.8; % Rate at which gains are increased
-% a.int_scale_i = @(t) s0 + (1 - s0) * (1 - exp(-gain_rate*t));
-% a.int_scale_k = @(t) exp(-gain_rate*t);
-a.int_scale_i = @(t) 1;
-a.int_scale_k = @(t) 0;
+a.kp_b = scale*3000;  % Proportional [kg*s^-2]
+a.kd_b = scale*500;  % Derivative [kg/s]    
+a.ki_b = scale*200;  % Integral [kg*s^-3] 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Control Gain Mixing %%%%%%%%%%%%%%%%%%%%
@@ -97,11 +84,11 @@ a.r_g = 0.4; % [m]
 
 % If |pr-pr_d| <= r_k, apply "h_k" proportion of relative position control
 a.r_k = 0.4; % [m]
-a.h_k = 0.5; % Proportion of applied relative position control
+a.h_k = 0.0; % Proportion of applied relative position control
 
 % Proportion of applied inertial stability and relative position control
 % in the center
-n = 1; % Polynomial order
+n = 2; % Polynomial order
 a.C = @(x) ...
     ((-1/(1-(a.pr_d+a.r_g))^n) * ...
         (sign(x-a.pr_d).*(x-(a.pr_d+sign(x-a.pr_d)*a.r_g))).^n + 1) .* ...
@@ -109,8 +96,8 @@ a.C = @(x) ...
     + 1 * (abs(x-a.pr_d) <= a.r_g);
 
 % Proportion of applied boundary relative position control
-n = 1; % Polynomial order
-a.K = @(x) ...
+n = 2; % Polynomial order
+a.B = @(x) ...
     (-((a.h_k-1)/(1-(a.pr_d+a.r_k))^n) * ...
         (sign(x-a.pr_d).*(x-(a.pr_d+sign(x-a.pr_d)*a.r_k))).^n + a.h_k) .*...
             (abs(x-a.pr_d)> a.r_k) ...
@@ -120,21 +107,21 @@ a.K = @(x) ...
 
 pr = linspace(0,1,1000); % relative position test values
 cent_gain = a.C(pr); % Proportion of center control gain
-boundary_gain = a.K(pr); % Proportion of boundary control gain
+boundary_gain = a.B(pr); % Proportion of boundary control gain
 
-figure;
-plot(pr,cent_gain)
-hold on
-plot(pr, boundary_gain)
-xline(a.pr_d,'--','Label','$p_{rd}$','Interpreter','latex','FontSize',15,...
-    'LabelOrientation','horizontal','LabelVerticalAlignment','middle')
-title('Center and Boundary Control Mixing')
-xlabel('Relative Position (m)')
-ylabel('Gain Proportion')
-xlim([-0.1 1.1])
-ylim([-0.1 1.1])
-legend('Center','Boundary')
-grid on
+% figure;
+% plot(pr,cent_gain)
+% hold on
+% plot(pr, boundary_gain)
+% xline(a.pr_d,'--','Label','$p_{rd}$','Interpreter','latex','FontSize',15,...
+%     'LabelOrientation','horizontal','LabelVerticalAlignment','middle')
+% title('Center and Boundary Control Mixing')
+% xlabel('Relative Position (m)')
+% ylabel('Gain Proportion')
+% xlim([-0.1 1.1])
+% ylim([-0.1 1.1])
+% legend('Center','Boundary')
+% grid on
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%% Performance Parameters %%%%%%%%%%%%%%%%%%%
