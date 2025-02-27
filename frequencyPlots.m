@@ -19,12 +19,15 @@ beta_wave = max_wave;
 acceleration_gains = 4000:500:15000;
 rel_prop_gains = 50:50:1500;
 rel_deriv_gains = 2500:500:6000;
-B_scale = 0:0.2:1;
-r_g = 0.2:0.1:0.5; 
-n_vals = 1:4;
+% B_scale = 0:0.2:1;
+% r_g = 0.2:0.1:0.5; 
+% n_vals = 1:4;
 % acceleration_gains = 12500;
 % rel_prop_gains = 800;
 % rel_deriv_gains = 3000;
+B_scale = 0.2;
+r_g = 0.4; 
+n_vals = 4;
 
 good_control = -1*ones(length(acceleration_gains), ...
                        length(rel_prop_gains), ...
@@ -188,7 +191,7 @@ end
 
 warning(originalState);
 
-% save('good_control_info_V6', "max_isolation", "acceleration_gains", ...
+% save('test_good_control_info', "max_isolation", "acceleration_gains", ...
 %     "rel_prop_gains", "rel_deriv_gains", "r_g", "B_scale")
 
 
