@@ -46,9 +46,6 @@ switch integrator_type
     case 7
         % Adams-Bashforth 5 Step (TODO)
         output_value_local = 0;
-    case 8
-        % Rugna Katta
-        output_value_local = output(1, :) + 1/6*val_dot(1, :);
 end
 
 % Set the output as a float (single)

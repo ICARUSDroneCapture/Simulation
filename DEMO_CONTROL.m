@@ -1,0 +1,175 @@
+close all; clear; clc;
+
+rng(1,"twister");
+
+% Use same random seed
+
+set(groot,'DefaultLineLineWidth',1)
+
+simulationParameters;
+
+close all;
+
+% Redefining acceleration/gyro curves for clarity
+
+a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
+a.real_vel = @(t) beta*alpha*cos(beta*t);
+a.real_accel = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
+a.real_ang = @(t) atan(beta*alpha*cos(beta*t)); % [deg]
+a.real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [deg/s]
+
+% Testing simple equations to verify integration
+
+real_vel = @(t, y) 1/3*t.^3;
+real_ang = @(t, y) 1/6*t.^4; % [deg]
+
+real_accel = @(t, y) t.^2; % [m*s^-2]
+real_ang_rate = @(t, y) 2/3*t.^3; % [deg/s]
+
+dynamics = @(t, y) [ t.^2; 2/3*t.^3 ]; % [ real_accel real_ang_rate]
+
+%% Sensor Model Aspects
+
+% Simulation time
+startTime = 0;
+finishTime = 20;
+tspan = [startTime finishTime]; % [s]
+
+% dt = 1/imu_rate;  % [s]
+dt = 0.0001;
+t = (tspan(1):dt:tspan(2))';
+t_count = length(t);
+indeces = @(t) floor(t/dt)+1;
+
+defineSignals
+
+%% Run Control Dynamics Integration
+
+fprintf('\nStarting Integration with NO Sensor Error.')
+fprintf("\nTime: ")
+
+% % Initial States
+% p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
+% p_dot0 = 0;   % Platform velocity [m/s]
+% pr_err_accum0 = 0;            % Integral of relative position error [m*s]
+% pm0 = p0;                     % Platform inetegrated position [m]
+% pm_dot = p_dot0;              % Platform integrated velocity [m/s]
+% pm_ddot = a.d_ddot(tspan(1)); % Platform measured acceleration [m*s^-2]
+% p_theta0 = a.real_ang(tspan(1)); % Platform inertial angle [deg]
+
+% Initial States
+p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
+p_dot0 = 0;   % Platform velocity [m/s]
+pr_err_accum0 = 0;            % Integral of relative position error [m*s]
+pm0 = p0;                     % Platform inetegrated position [m]
+pm_dot = p_dot0;              % Platform integrated velocity [m/s]
+pm_ddot = 0; % Platform measured acceleration [m*s^-2]
+p_theta0 = 0; % Platform inertial angle [deg]
+p_theta_err_accum0 = 0;
+
+s0 = [p0 p_dot0 pr_err_accum0 pm0 pm_dot pm_ddot];
+
+control_dynamics = @(t, state) NoError_FixedInt(t, a, state);
+
+[t_control, sol_control]= rk4_solver(control_dynamics, tspan, s0, dt);
+
+
+fprintf('\nFinished Integration with NO Sensor Error.\n')
+
+%% Running Control Law Simulation WITH Sensor Error
+
+fprintf('\nStarting Integration WITH Sensor Error.')
+fprintf("\nTime: ")
+
+% Running simulation with sensor error
+
+s0 = [p0 p_dot0 pr_err_accum0 pm0 pm_dot pm_ddot p_theta0 p_theta_err_accum0];
+control_dynamics_err = @(t, state) rigidArmControl_FixedInt(t, a, state);
+
+[t_error, sol_error]= rk4_solver(control_dynamics_err, tspan, s0, dt);
+
+% Get platform position in inertial frame, with deck as reference zero
+plat_pos = sol_error(:,1);
+
+fprintf('\nFinished Integration WITH Sensor Error.\n')
+
+% %% Plotting other states
+% 
+% figure
+% plot(t_error, sol_error(:, 1))
+% xlabel('Time (sec)')
+% ylabel('Velocity (m/s)')
+% title('Platform Inertial Velocity')
+% 
+% figure
+% plot(t_error, sol_error(:, 2))
+% xlabel('Time (sec)')
+% ylabel('Angle (rad)')
+% title('Platform Angle')
+
+%% Plotting Platform Position
+
+figure;
+plot(t_control, sol_control(:,1))
+hold on
+plot(t_error, plat_pos)
+hold on
+plot(t,a.d(t))
+hold on
+plot(t, a.d(t)+1)
+hold on
+plot(t, a.d(t)+0.09, '--')
+hold on
+plot(t, a.d(t)+0.5+0.41, '--')
+title('Platform Inertial Position vs Time')
+xlabel('Time (s)')
+ylabel('Position (m)')
+title('Platform Inertial Position over Time')
+legend('Fixed-Step (without sensor error) Integration', 'Fixed-Step (with sensor error) Integration')
+
+
+%% Getting and Plotting error
+
+pos_err = plat_pos - sol_control(:, 1);
+
+sz = 2;
+plot_scale = 0.001;
+
+figure
+scatter(t_error, pos_err*100, sz, 'filled', displayName="Positional Error")
+% hold on
+% plot(t,a.d(t)/200, displayName="Deck Disturbance")
+% hold on
+% plot(t,plot_scale*a.d(t))
+% hold on
+% plot(t, plot_scale*(a.d(t)+1))
+% hold on
+% plot(t, plot_scale*(a.d(t)+0.09), '--')
+% hold on
+% plot(t, plot_scale*(a.d(t)+0.5+0.41), '--')
+title('Worst Case Relative Position Error vs Time')
+xlabel('Time (s)')
+ylabel('Error (cm)')
+legend
+
+plot_scale = 0.00001;
+growth = diff(pos_err);
+
+% figure
+% scatter(t_error(2:end), growth*100, sz, 'filled', displayName="Positional Error")
+% hold on
+% plot(t,plot_scale*a.d(t))
+% hold on
+% plot(t, plot_scale*(a.d(t)+1))
+% hold on
+% plot(t, plot_scale*(a.d(t)+0.09), '--')
+% hold on
+% plot(t, plot_scale*(a.d(t)+0.5+0.41), '--')
+% % hold on
+% % plot(t,a.d(t)/200, displayName="Deck Disturbance")
+% title('Error Growth over Time')
+% xlabel('Time (s)')
+% ylabel('Error (cm)')
+% legend
+% 
+% 

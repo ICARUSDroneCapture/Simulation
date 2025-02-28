@@ -1,4 +1,10 @@
-clc; clear; close all;
+close all; clear; clc;
+
+rng(1,"twister");
+
+% Use same random seed
+
+set(groot,'DefaultLineLineWidth',1)
 
 simulationParameters;
 
@@ -6,11 +12,11 @@ close all;
 
 % Redefining acceleration/gyro curves for clarity
 
-real_pos = @(t) alpha*sin(beta*t) + hdeck;
-real_vel = @(t) beta*alpha*cos(beta*t);
-real_accel = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
-real_ang = @(t) atan(beta*alpha*cos(beta*t)); % [deg]
-real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [deg/s]
+a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
+a.real_vel = @(t) beta*alpha*cos(beta*t);
+a.real_accel = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
+a.real_ang = @(t) atan(beta*alpha*cos(beta*t)); % [deg]
+a.real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [deg/s]
 
 % Testing simple equations to verify integration
 
@@ -32,13 +38,17 @@ real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(b
 %   IMX-5: https://docs.inertialsense.com/datasheets/IMX-5_IMU_AHRS_GNSS-INS_Datasheet.pdf
 
 % Simulation time
-% tspan = [0 60*10]; % [s]
-tspan = [0 300]; % [s]
-dt = 0.01; % [s]
+startTime = 0;
+finishTime = 180; %
+tspan = [startTime finishTime]; % [s]
+dt = 0.01;  % [s]
 t = (tspan(1):dt:tspan(2))';
 
 imx_5_specs
 % gx5_specs
+
+specs.g = a.g;
+a.specs = specs;
 
 k = specs.k;
 nonlinearity = specs.dk;
@@ -95,13 +105,13 @@ a.noisyGyroCurve = @(t, real_ang_rate) real_ang_rate(t) + gyro_noise_std*randn(l
 
 figure
 subplot(1,2,1)
-plot(t, a.noisyAccelCurve(t, real_accel)/a.g)
+plot(t, a.noisyAccelCurve(t, a.real_accel)/a.g)
 xlabel('Time (s)')
 ylabel('Noise Offset (g)')
 title('Accelerometer Noise Offset Distribution')
 subplot(1,2,2)
 xlabel('Time (s)')
-plot(t, a.noisyGyroCurve(t, real_ang_rate))
+plot(t, a.noisyGyroCurve(t, a.real_ang_rate))
 ylabel('Noise Offset (dps)')
 title('Gyroscope Noise Offset Distribution')
 
@@ -116,11 +126,11 @@ for i = 1:length(t)
 
     time = t(i);
 
-    val_dot = [real_accel(time) real_ang_rate(time)];
+    val_dot = [a.real_accel(time) a.real_ang_rate(time)];
     deriv_record = insertVector(deriv_record, val_dot);
 
     state_vec = fdm_integrator(state_record, deriv_record, dt, integrator_type);
-    
+
     state_record = insertVector(state_record, state_vec);
 
     state_int(i, :) = state_vec;
@@ -131,31 +141,31 @@ angle = state_int(:, 2);
 
 figure
 subplot(2,1,1)
-plot(t, real_accel(t));
+plot(t, a.real_accel(t));
 xlabel('Time (sec)')
-ylabel('Linear Velocity (m/s)')
-title('Linear Acceleration')
+ylabel('Linear Acceleration (m/s^s)')
+title('Wave Linear Acceleration over Time')
 
 subplot(2,1,2)
 plot(t, vel);
 xlabel('Time (sec)')
-ylabel('Linear Acceleration (m/s^2)')
-title('Integrated Angle (from angular velocity)')
+ylabel('Linear Velocity (m/s^2)')
+title('Wave Integrated Velocity (from acceleration)')
 
 figure
 subplot(2,1,1)
-plot(t, real_ang_rate(t));
+plot(t, a.real_ang_rate(t));
 xlabel('Time (sec)')
 ylabel('Angular Velocity (rad/s)')
-title('Angular Velocity')
+title('Wave Angular Velocity over Time')
 
 subplot(2,1,2)
 plot(t, angle);
 xlabel('Time (sec)')
 ylabel('Angle (deg)')
-title('Integrated Angle (from angular velocity)')
+title('Wave Integrated Angle (from angular velocity)')
 
-%% Integrate Noisy Signal to show Random Walk
+% Integrate Noisy Signal to show Random Walk
 
 % Columns represent each variable, so [accel gyro]
 % Rows represents timesteps, max limit of 5 timesteps kept track of
@@ -168,11 +178,11 @@ for i = 1:length(t)
 
     time = t(i);
 
-    val_dot_noise = [a.noisyAccelCurve(time, real_accel) a.noisyGyroCurve(time, real_ang_rate)];
+    val_dot_noise = [a.noisyAccelCurve(time, a.real_accel) a.noisyGyroCurve(time, a.real_ang_rate)];
     deriv_record_noise = insertVector(deriv_record_noise, val_dot_noise);
 
     state_vec_noise = fdm_integrator(state_record_noise, deriv_record_noise, dt, integrator_type);
-    
+
     state_record_noise = insertVector(state_record_noise, state_vec_noise);
 
     state_int_noise(i, :) = state_vec_noise;
@@ -183,9 +193,9 @@ angle_noise = state_int_noise(:, 2);
 
 figure
 subplot(2,1,1)
-plot(t, a.noisyAccelCurve(t, real_accel))
+plot(t, a.noisyAccelCurve(t, a.real_accel))
 hold on 
-plot(t, real_accel(t));
+plot(t, a.real_accel(t));
 xlabel('Time (s)')
 ylabel('Linear Acceleration with Noise (m/s^2)')
 title('Noisy Linear Acceleration Curve')
@@ -201,9 +211,9 @@ title('Integrated Velocity with Noise (from Linear Acceleration)')
 figure
 subplot(2,1,1)
 xlabel('Time (s)')
-plot(t, a.noisyGyroCurve(t, real_ang_rate))
+plot(t, a.noisyGyroCurve(t, a.real_ang_rate))
 hold on
-plot(t, real_ang_rate(t));
+plot(t, a.real_ang_rate(t));
 ylabel('Angular Velocity with Noise (dps)')
 title('Noisy Angular Velocity Curve')
 
@@ -234,6 +244,7 @@ plot(t, n_a(t))
 xlabel('Time (sec)')
 ylabel('Velocity Error (m/s)')
 title('Velocity Random Walk')
+legend('Noise Walk', 'Accelerometer Gaussian Noise Walk')
 
 subplot(2,1,2)
 scatter(t, angle_noise_walk_diff, sz, 'filled')
@@ -242,21 +253,25 @@ plot(t, n_g(t))
 xlabel('Time (sec)')
 ylabel('Angle Error (deg)')
 title('Angle Random Walk')
+legend('Noise Walk', 'Gyroscope Gaussian Noise Walk')
 
-%% Showing drift for flat signals
+%% Showing drift for regular signals
 
-accel_curve = real_accel(t);
-gyro_curve = real_ang_rate(t);
+accel_curve = a.real_accel(t);
+gyro_curve = a.real_ang_rate(t);
 
 gyro_tau = 150; % [s]
 accel_tau = 20; % [s]
 
 % driftPeriod = 5 * 60;  % drift changes every 5 minutes
-driftPeriod = 30;  % drift changes every 5 seconds
+driftPeriod = 2;  % drift changes every 5 seconds
 driftAlterations = floor(tspan(2)/driftPeriod)+1; % drift changes every 5 minutes
 
-% b_a_drift_vals = b_a.*randn(driftAlterations,1);
-% b_g_drift_vals = b_g.*randn(driftAlterations,1);
+% b_a_drift_vals = b_a.*ones(driftAlterations,1);
+% b_g_drift_vals = b_g.*ones(driftAlterations,1);
+
+% a.biasStabDistAccel = @(t) b_a*(1-exp(-t/accel_tau));
+% a.biasStabDistGyro = @(t) b_g*(1-exp(-t/gyro_tau));
 
 b_a_drift_vals = b_a.*rand(driftAlterations,1);
 b_g_drift_vals = b_g.*rand(driftAlterations,1);
@@ -266,8 +281,6 @@ bias_indeces = floor(t./(length(t)/driftAlterations)*100)+1;
 a.biasStabDistAccel = b_a_drift_vals(bias_indeces);
 a.biasStabDistGyro = b_g_drift_vals(bias_indeces);
 
-% a.biasStabDistGyro = @(t) b_g.*randn(length(t),1);
-
 figure
 subplot(2,1,1)
 plot(t, a.biasStabDistAccel);
@@ -286,131 +299,30 @@ hold on
 yline(-b_g)
 xlabel('Time (sec)')
 ylabel('Angular Rate (m/s^2)')
-title('Gyroscope Bias Offset Model')
+title('Gyroscope Bias Biass Instability Offset Model')
 
 a.biasedAccelCurve = @(t, real_accel) real_accel(t) + b_a_drift_vals(bias_indeces);
 a.biasedGyroCurve = @(t, real_ang_rate) real_ang_rate(t) + b_g_drift_vals(bias_indeces);
 
 figure
 subplot(2,1,1)
-plot(t, a.biasedAccelCurve(t, real_accel));
+plot(t, a.biasedAccelCurve(t, a.real_accel));
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 title('Accelerometer Bias Offset Model')
 subplot(2,1,2)
-plot(t, a.biasedGyroCurve(t, real_ang_rate));
+plot(t, a.biasedGyroCurve(t, a.real_ang_rate));
 xlabel('Time (sec)')
 ylabel('Angular Rate (m/s^2)')
 title('Gyroscope Bias Offset Model')
-
-% a.biasStabDistAccel = @(t) b_a*(1-exp(-t/accel_tau));
-% a.biasStabDistGyro = @(t) b_g*(1-exp(-t/gyro_tau));
-
-% a.biasStabDistAccel = @(t) b_a*(1-exp(t));
-% a.biasStabDistGyro = @(t) b_g*(1-exp(t));
-
-% Drawing offset lines
-
-biasTime = [a.biasStabDistAccel, a.biasStabDistGyro];
-
-b_a_scale = 10;
-b_g_scale = 10;
-bias_std = [b_a_scale*b_a; b_g_scale*b_g];
-bias_std_scaled = k.*bias_std;
-q = [dt; dt];
-filteredBias = KalmanFilter(t, biasTime', bias_std_scaled, q);
-
-filteredAccelBias = filteredBias(1, :);
-filteredGyroBias = filteredBias(2, :);
-
-figure
-subplot(2,1,1)
-plot(t, a.biasStabDistAccel);
-hold on
-yline(b_a)
-hold on
-yline(-b_a)
-hold on
-plot(t, filteredAccelBias, 'linewidth', 3);
-xlabel('Time (sec)')
-ylabel('Acceleration (m/s^2)')
-title('Accelerometer Bias Offset Model')
-subplot(2,1,2)
-plot(t, a.biasStabDistGyro);
-hold on
-yline(b_g)
-hold on
-yline(-b_g)
-hold on
-plot(t, filteredGyroBias,'linewidth', 3);
-xlabel('Time (sec)')
-ylabel('Angular Rate (m/s^2)')
-title('Gyroscope Bias Offset Model')
-
-a.theta_err = @(t) a.biasStabDistAccel.*t + ARW.*sqrt(t);
-
-a.accel_drift_vert = @(t, real_accel, theta_err) (1 + k)*real_accel(t) + a.biasStabDistAccel + g*(1-cos(theta_err(t)));
-a.accel_drift_horz = @(t, real_accel, theta_err) (1 + k)*real_accel(t) + a.biasStabDistAccel + g*sin(theta_err(t));
-
-a.gyro_drift = @(t, real_ang_rate) (1 + k)*real_ang_rate(t) + a.biasStabDistGyro;
-
-% flat = zeros(length(t), 1);
-% gyro_drift_flat = zeros(size(flat));
-% accel_drift_flat = zeros(size(flat));
-% 
-% for i=2:length(t)
-%     w_k = flat(i);
-% 
-%     x_k_1 = gyro_drift_flat(i-1);
-%     x_k = exp(-dt/gyro_tau)*x_k_1+w_k;
-% 
-%     gyro_drift_flat(i) = x_k;
-% 
-% 
-%     x_k_1 = accel_drift_flat(i-1);
-%     x_k = exp(-dt/accel_tau)*x_k_1+w_k;
-% 
-%     accel_drift_flat(i) = x_k;
-% end
-
-figure
-subplot(2,1,1)
-yline(b_a); hold on
-plot(t, a.biasStabDistAccel)
-xlabel('Time (s)')
-ylabel('Bias Offset (dps)')
-title('Accelerometer Bias Instability Offset')
-
-subplot(2,1,2)
-yline(b_g); hold on
-plot(t, a.biasStabDistGyro)
-xlabel('Time (s)')
-ylabel('Bias Offset (m/s^{2})')
-title('Gyroscope Bias Instability Offset')
-
-
-figure
-subplot(2,1,1)
-plot(t, accel_curve); hold on
-plot(t, a.accel_drift_vert(t, real_accel, a.theta_err)); hold on
-plot(t, a.accel_drift_horz(t, real_accel, a.theta_err));
-xlabel('Time (s)')
-ylabel('Bias Offset (dps)')
-title('Accelerometer Bias Drift')
-legend('Real Acceleration Signal', 'Drifting Vertical Signal', 'Drifting Horizontal Signal')
-
-subplot(2,1,2)
-plot(t, gyro_curve); hold on
-plot(t, a.gyro_drift(t, real_ang_rate));
-xlabel('Time (s)')
-ylabel('Bias Offset (m/s^{2})')
-title('Gyroscope Bias Drift')
-legend('Real Angular Rate Signal', 'Drifting Angular Rate Signal')
 
 % Bias Error over Temp
 
-a.biasTempDistAccel = @(t) accel_temp_bias*randn(length(t),1);
-a.biasTempDistGyro = @(t) gyro_temp_bias*randn(length(t),1);
+% a.biasTempDistAccel = @(t) accel_temp_bias*randn(length(t),1);
+% a.biasTempDistGyro = @(t) gyro_temp_bias*randn(length(t),1);
+
+a.biasTempDistAccel = @(t) 0;
+a.biasTempDistGyro = @(t) 0;
 
 figure
 subplot(1,2,1)
@@ -440,33 +352,147 @@ ylabel('Noise Offset (dps)')
 title('Gyroscope Temp Bias Offset Distribution')
 legend('Temp Noise Curve', 'Real Curve')
 
+a.theta_err = @(t) a.biasStabDistGyro.*t + ARW.*sqrt(t);
+
+figure
+plot(t, a.theta_err(t))
+xlabel('Time (sec)')
+ylabel('Angle (def)')
+title('Angle Error Growth over Time')
+
+a.accel_drift_vert = @(t, real_accel, theta_err, biasTempDistAccel) (1 + k)*real_accel(t) + a.biasStabDistAccel  + biasTempDistAccel(t) + g*(1-cos(theta_err(t)));
+a.accel_drift_horz = @(t, real_accel, theta_err, biasTempDistAccel) (1 + k)*real_accel(t) + a.biasStabDistAccel  + biasTempDistAccel(t)  + g*sin(theta_err(t));
+
+a.gyro_drift = @(t, real_ang_rate, biasTempDistGyro) (1 + k)*real_ang_rate(t) + a.biasStabDistGyro + biasTempDistGyro(t);
+
+figure
+subplot(2,1,1)
+plot(t, accel_curve); hold on
+plot(t, a.accel_drift_vert(t, a.real_accel, a.theta_err, a.biasTempDistAccel)); hold on
+plot(t, a.accel_drift_horz(t, a.real_accel, a.theta_err, a.biasTempDistAccel));
+xlabel('Time (s)')
+ylabel('Bias Offset (dps)')
+title('Accelerometer Bias Drift')
+legend('Real Acceleration Signal', 'Drifting Vertical Accelerometer Signal', 'Drifting Horizontal Accelerometer Signal')
+
+subplot(2,1,2)
+plot(t, gyro_curve); hold on
+plot(t, a.gyro_drift(t, a.real_ang_rate, a.biasTempDistGyro));
+xlabel('Time (s)')
+ylabel('Bias Offset (m/s^{2})')
+title('Gyroscope Bias Drift')
+legend('Real Angular Rate Signal', 'Drifting Angular Rate Signal')
+
+
+%% Integrating to show bias integration
+
+% Columns represent each variable, so [accel gyro]
+% Rows represents timesteps, max limit of 5 timesteps kept track of
+integrator_type = 2;
+state_record_bias = zeros(5, 3);
+deriv_record_bias = zeros(5, 3);
+state_int_bias = zeros(length(t), 3);
+
+for i = 1:length(t)
+
+    time = t(i)
+
+    val_dot_bias = [a.accel_drift_vert(t, a.real_accel, a.theta_err, a.biasTempDistAccel) a.accel_drift_horz(t, a.real_accel, a.theta_err, a.biasTempDistAccel) a.gyro_drift(t, a.real_ang_rate, a.biasTempDistGyro)];
+    deriv_record_bias = insertVector(deriv_record_bias, val_dot_bias);
+
+    state_vec_bias = fdm_integrator(state_record_bias, deriv_record_bias, dt, integrator_type);
+
+    state_record_bias = insertVector(state_record_bias, state_vec_bias);
+
+    state_int_bias(i, :) = state_vec_bias;
+end
+
+vert_vel_bias = state_int_bias(:, 1);
+horz_vel_bias = state_int_bias(:, 2);
+angle_bias = state_int_bias(:, 3);
+
+figure
+subplot(2,1,1)
+plot(t, accel_curve); hold on
+plot(t, a.accel_drift_vert(t, a.real_accel, a.theta_err, a.biasTempDistAccel)); hold on
+plot(t, a.accel_drift_horz(t, a.real_accel, a.theta_err, a.biasTempDistAccel));
+xlabel('Time (s)')
+ylabel('Linear Acceleration with Bias (m/s^2)')
+title('Biased Linear Acceleration Curve')
+legend('Real Accel Curve', 'Accel Biased Vertical Curve', 'Accel Biased Horizontal Curve')
+
+subplot(2,1,2)
+plot(t, vert_vel_bias);
+hold on
+plot(t, horz_vel_bias);
+hold on
+plot(t, vel);
+xlabel('Time (sec)')
+ylabel('Linear Velocity (m/s)')
+title('Integrated Velocity with Bias (from Linear Acceleration)')
+legend('Vertical Velocity (integrated) Biased Curve', 'Horizontal Velocity (integrated) Biased Curve', 'Real Velocity Curve')
+
+figure
+subplot(2,1,1)
+xlabel('Time (s)')
+plot(t, a.real_ang_rate(t)); hold on
+plot(t, a.gyro_drift(t, a.real_ang_rate, a.biasTempDistGyro))
+ylabel('Angular Velocity with Bias (dps)')
+title('Biased Angular Velocity Curve')
+legend('Real Angular Rate Curve', 'Angular Rate Biased Curve')
+
+subplot(2,1,2)
+plot(t, angle_bias);
+hold on
+plot(t, angle);
+xlabel('Time (sec)')
+ylabel('Angle (deg)')
+title('Integrated Angle with Bias (from Angular Velocity)')
+legend('Angle (integrated) Biased Curve', 'Real Angle Curve')
+
+% Drift Difference
+
+vert_vel_bias_diff = abs(vel - vert_vel_bias);
+horz_vel_bias_diff = abs(vel - horz_vel_bias);
+angle_bias_diff = abs(angle - angle_bias);
+
+figure
+subplot(2,1,1)
+scatter(t, vert_vel_bias_diff, sz, 'filled')
+hold on
+scatter(t, horz_vel_bias_diff, sz, 'filled')
+xlabel('Time (sec)')
+ylabel('Velocity Error (m/s)')
+title('Velocity Difference due to Bias')
+legend('Vertical', 'Horizontal')
+
+subplot(2,1,2)
+scatter(t, angle_bias_diff, sz, 'filled')
+xlabel('Time (sec)')
+ylabel('Angle Error (deg)')
+title('Angle Difference due to Bias')
+
 
 %% Combining bias drift, temp bias, turn-on bias, noise, and quantization
 
 accel_turn_on_bias_offset = normrnd(0, accel_noise_std);
 gyro_turn_on_bias_offset = normrnd(0, gyro_noise_std);
 
+% o_d_n_a_c_v: offset drifting noisy accel_curve vert
+% o_d_n_a_c_h: offset drifting noisy accel curve horz
+% o_d_n_g_c: offset drifting noisy gyro curve
 
-a.accel_drift_vert = @(t, real_accel, theta_err) (1 + k)*real_accel(t) + a.biasStabDistAccel + accel_noise_std*randn(length(t),1) + g*(1-cos(theta_err(t)));
-a.accel_drift_horz = @(t, real_accel, theta_err) (1 + k)*real_accel(t) + a.biasStabDistAccel + accel_noise_std*randn(length(t),1) + g*sin(theta_err(t));
-
-a.gyro_drift = @(t, real_ang_rate) (1 + k)*real_ang_rate(t) + a.biasStabDistGyro + gyro_noise_std*randn(length(t),1);
-
-% o_d_n_a_c_v: offset_drifting_noisy_accel_curve_vert
-% o_d_n_a_c_h: offset_drifting_noisy_accel_curve_horz
-% o_d_n_g_c: offset_drifting_noisy_gyro_curve
-
-a.o_d_n_a_c_v = @(t, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err) accel_drift_vert(t, real_accel, theta_err) + biasTempDistAccel(t) + noiseDistAccel(t) + accel_turn_on_bias_offset;
-a.o_d_n_a_c_h = @(t, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err) accel_drift_horz(t, real_accel, theta_err) + biasTempDistAccel(t) + noiseDistAccel(t) + accel_turn_on_bias_offset;
-a.o_d_n_g_c = @(t, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_drift(t, real_ang_rate) + biasTempDistGyro(t) + noiseDistGyro(t) + gyro_turn_on_bias_offset;
+a.o_d_n_a_c_v = @(t, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err) accel_drift_vert(t, real_accel, theta_err, biasTempDistAccel) + noiseDistAccel(t) + accel_turn_on_bias_offset;
+a.o_d_n_a_c_h = @(t, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err) accel_drift_horz(t, real_accel, theta_err, biasTempDistAccel) + noiseDistAccel(t) + accel_turn_on_bias_offset;
+a.o_d_n_g_c = @(t, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_drift(t, real_ang_rate, biasTempDistGyro) + noiseDistGyro(t) + gyro_turn_on_bias_offset;
 
 a.measured_accel_vert = @(t, o_d_n_a_c_v, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err) accel_resolution*floor(o_d_n_a_c_v(t, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err)/accel_resolution);
 a.measured_accel_horz = @(t, o_d_n_a_c_h, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err) accel_resolution*floor(o_d_n_a_c_h(t, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err)/accel_resolution);
 a.measured_gyro = @(t, o_d_n_g_c, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_resolution*floor(o_d_n_g_c(t, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate)/gyro_resolution);
 
-measured_accel_vert = a.measured_accel_vert(t, a.o_d_n_a_c_v, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, real_accel, a.theta_err);
-measured_accel_horz = a.measured_accel_horz(t, a.o_d_n_a_c_h, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, real_accel, a.theta_err);
-measured_gyro = a.measured_gyro(t, a.o_d_n_g_c, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, real_ang_rate);
+measured_accel_vert = a.measured_accel_vert(t, a.o_d_n_a_c_v, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, a.real_accel, a.theta_err);
+measured_accel_horz = a.measured_accel_horz(t, a.o_d_n_a_c_h, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, a.real_accel, a.theta_err);
+measured_gyro = a.measured_gyro(t, a.o_d_n_g_c, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, a.real_ang_rate);
 
 figure
 scatter(t, accel_curve, sz, 'filled')
@@ -476,7 +502,7 @@ hold on
 plot(t, measured_accel_horz)
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
-title('Accelerometer Real vs Realistic Signal')
+title('True Acceleration vs Realistic Accelerometer Signal')
 legend('Real Acceleration', 'Measured Vertical Acceleration', 'Measured Horizontal Acceleration')
 
 figure
@@ -485,49 +511,100 @@ hold on
 plot(t, measured_gyro)
 xlabel('Time (s)')
 ylabel('Angular Velocity (dps)')
-title('Gyroscope Real vs Realistic Signal')
+title('True Angular Velocity vs Realistic Gyroscope Signal')
 legend('Real Angular Velocity', 'Measured Angular Velocity')
 
-%% Applying Kalman Filter
-StatesOverTime = [measured_accel_vert, measured_accel_horz, measured_gyro];
+%% Integrating to show integration with ALL Error
 
-k_a_scale = 1;
-k_b_scale = 1;
-noise_std = [k_a_scale*(accel_noise_std+accel_temp_bias); k_a_scale*(accel_noise_std+accel_temp_bias); k_b_scale*(gyro_noise_std+gyro_temp_bias)];
-noise_scaled = k.*noise_std;
-q = [dt; dt; dt];
-filteredStates = KalmanFilter(t, StatesOverTime', noise_scaled, q);
+% Columns represent each variable, so [accel gyro]
+% Rows represents timesteps, max limit of 5 timesteps kept track of
+integrator_type = 2;
+state_record_error = zeros(5, 3);
+deriv_record_error = zeros(5, 3);
+state_int_error = zeros(length(t), 3);
 
-filteredAccelVert = filteredStates(1, :);
-filteredAccelHorz = filteredStates(2, :);
-filteredGyro = filteredStates(3, :);
+for i = 1:length(t)
+
+    time = t(i)
+
+    val_dot_error = [measured_accel_vert(i) measured_accel_horz(i) measured_gyro(i)];
+    deriv_record_error = insertVector(deriv_record_error, val_dot_error);
+
+    state_vec_error = fdm_integrator(state_record_error, deriv_record_error, dt, integrator_type);
+
+    state_record_error = insertVector(state_record_error, state_vec_error);
+
+    state_int_error(i, :) = state_vec_error;
+end
+
+vert_vel_error = state_int_error(:, 1);
+horz_vel_error = state_int_error(:, 2);
+angle_error = state_int_error(:, 3);
 
 figure
+subplot(2,1,1)
 plot(t, measured_accel_vert)
-hold on
-plot(t, filteredAccelVert)
-xlabel('Time (s)')
-ylabel('Acceleration (m/s^2)')
-title('Vertical Accelerometer Real vs Filtered Signal')
-legend('Measured Vertical Acceleration Signal', 'Filtered Vertical Acceleration Signal')
-
-figure
+hold on 
 plot(t, measured_accel_horz)
-hold on
-plot(t, filteredAccelHorz)
+hold on 
+plot(t, a.real_accel(t));
 xlabel('Time (s)')
-ylabel('Acceleration (m/s^2)')
-title('Horizontal Accelerometer Real vs Filtered Signal')
-legend('Measured Horizontal Acceleration Signal', 'Filtered Horizontal Acceleration Signal')
+ylabel('Linear Acceleration (m/s^2)')
+title('Linear Acceleration with All Error')
+legend('Vertical Accel with Error', 'Horizontal Accel with Error', 'Real Accel Curve')
+
+subplot(2,1,2)
+plot(t, vert_vel_error);
+hold on
+plot(t, horz_vel_error);
+hold on
+plot(t, vel);
+xlabel('Time (sec)')
+ylabel('Linear Velocity (m/s)')
+title('Integrated Velocity with All Error (from Linear Acceleration)')
+legend('Vertical Velocity (integrated) with Error', 'Horizontal Velocity (integrated) with Error', 'Real Velocity Curve')
 
 figure
+subplot(2,1,1)
+xlabel('Time (s)')
 plot(t, measured_gyro)
 hold on
-plot(t, filteredGyro)
-xlabel('Time (s)')
+plot(t, a.real_ang_rate(t));
+xlabel('Time (sec)')
 ylabel('Angular Velocity (dps)')
-title('Gyroscope Real vs Filtered Signal')
-legend('Measured Angular Velocity Signal', 'Filtered Angular Velocity Signal')
+title('Angular Velocity with All Error')
+legend('Angular Rate with Error', 'Real Angular Rate Curve')
+
+subplot(2,1,2)
+plot(t, angle_error);
+hold on
+plot(t, angle);
+xlabel('Time (sec)')
+ylabel('Angle (deg)')
+title('Integrated Angle with All Error (from Angular Velocity)')
+legend('Angle (integrated) with Error', 'Real Angle Curve')
+
+% Drift Difference
+
+vert_vel_error_walk_diff = abs(vel - vert_vel_error);
+horz_vel_error_walk_diff = abs(vel - horz_vel_error);
+angle_error_walk_diff = abs(angle - angle_error);
+
+figure
+subplot(2,1,1)
+scatter(t, vert_vel_error_walk_diff, sz, 'filled')
+hold on
+scatter(t, horz_vel_error_walk_diff, sz, 'filled')
+xlabel('Time (sec)')
+ylabel('Velocity Error (m/s)')
+title('Velocity Difference due to All Error')
+legend('Vertical', 'Horizontal')
+
+subplot(2,1,2)
+scatter(t, angle_error_walk_diff, sz, 'filled')
+xlabel('Time (sec)')
+ylabel('Angle Error (deg)')
+title('Angle Difference due to All Error')
 
 %% Error Compensation
 
@@ -562,7 +639,7 @@ plot(t, StatesOverTime_measured(:, 1))
 hold on
 plot(t, StatesOverTime_corrected(:, 1))
 hold on
-plot(t, real_accel(t), color='black', LineWidth=1)
+plot(t, a.real_accel(t), color='black', LineWidth=1)
 
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
@@ -575,7 +652,7 @@ plot(t, StatesOverTime_measured(:, 3))
 hold on
 plot(t, StatesOverTime_corrected(:, 3))
 hold on
-plot(t, real_accel(t), color='black', LineWidth=1)
+plot(t, a.real_accel(t), color='black', LineWidth=1)
 
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
@@ -588,14 +665,73 @@ plot(t, StatesOverTime_measured(:, 4))
 hold on
 plot(t, StatesOverTime_corrected(:, 4))
 hold on
-plot(t, real_ang_rate(t), color='black', LineWidth=1)
+plot(t, a.real_ang_rate(t), color='black', LineWidth=1)
 
 xlabel('Time (s)')
 ylabel('Angular Velocity (deg/s)')
 title('Drifting Gyroscope Signal')
 legend('Raw Measurement', 'Measurement Correction', 'Expected Calculation')
 
+%% Applying Kalman Filter
+StatesOverTime = [StatesOverTime_corrected(:, 1), StatesOverTime_corrected(:, 3), StatesOverTime_corrected(:, 4)];
+
+k_a_scale = 1.2;
+k_b_scale = 0.6;
+noise_std = [k_a_scale*(accel_noise_std+accel_temp_bias+b_a); k_a_scale*(accel_noise_std+accel_temp_bias+b_a); k_b_scale*(gyro_noise_std+gyro_temp_bias+b_g)];
+noise_scaled = k.*noise_std;
+q = [dt; dt; dt];
+filteredStates = KalmanFilter(t, StatesOverTime', noise_scaled, q);
+
+filteredAccelHorz = filteredStates(1, :);
+filteredAccelVert = filteredStates(2, :);
+filteredGyro = filteredStates(3, :);
+
+figure
+plot(t, StatesOverTime_measured(:, 1))
+hold on
+plot(t, filteredAccelHorz)
+hold on
+plot(t, a.real_accel(t))
+xlabel('Time (s)')
+ylabel('Acceleration (m/s^2)')
+title('Horizontal Accelerometer Measured Signal vs Filtered Signal')
+legend('Measured Signal', 'Filtered Signal', 'True Signal')
+
+figure
+plot(t, StatesOverTime_measured(:, 3))
+hold on
+plot(t, filteredAccelVert)
+hold on
+plot(t, a.real_accel(t))
+xlabel('Time (s)')
+ylabel('Acceleration (m/s^2)')
+title('Vertical Accelerometer Measured Signal vs Filtered Signal')
+legend('Measured Signal', 'Filtered Signal', 'True Signal')
+
+figure
+plot(t, StatesOverTime_measured(:, 4))
+hold on
+plot(t, filteredGyro)
+hold on
+plot(t, a.real_ang_rate(t))
+xlabel('Time (s)')
+ylabel('Angular Velocity (dps)')
+title('Gyroscope Measured Signal vs Filtered Signal')
+legend('Measured Signal', 'Filtered Signal', 'True Signal')
+
 %% Functions
+
+function min_idx = findNearest(t_ref, t_compare)
+    min_diff = 1;
+    min_idx = 0;
+    for idx=1:length(t_compare)
+        curr_t = t_compare(idx);
+        if abs(curr_t-t_ref) < min_diff
+            min_diff = abs(curr_t-t_ref);
+            min_idx = idx;
+        end
+    end
+end
 
 function states = KalmanFilter(t, signal, noise_std, q)
     n = length(t);
@@ -679,13 +815,14 @@ function state = compensateError(measuredState, specs, time)
     GYRO_BIAS = [b_g b_g b_g]';
 
     theta_err = b_g/2*time + ARW*sqrt(time);
+    % theta_err = b_g*time + ARW*sqrt(time);
 
     a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1) - g*sin(theta_err);
     a_adjusted_z = measured_accel(3) - ACCEL_BIAS(3) - g*(1-cos(theta_err));
     a_adjusted = [a_adjusted_x_y; a_adjusted_x_y; a_adjusted_z];
 
-    % Adding calibration error of up to 2 bits of accuracy
-    a_adjusted = a_adjusted - 2*accel_resolution;
+    % Adding calibration error of around 2 bits of accuracy
+    a_adjusted = a_adjusted + 2*accel_resolution*randn(1);
     
     A_FIX = inv([1+S_x+dS_x  M_xy       M_xz
                 M_yx         1+S_y+dS_y M_yz
@@ -700,8 +837,8 @@ function state = compensateError(measuredState, specs, time)
 
     g_adjusted = measured_gyro - GYRO_BIAS - G_DEP_BIAS*corrected_a;
     
-    % Adding calibration error of up to 2 bits of accuracy
-    g_adjusted = g_adjusted - 2*gyro_resolution;
+    % Adding calibration error of around 2 bits of accuracy
+    g_adjusted = g_adjusted + 2*gyro_resolution*randn(1);
 
     corrected_g = A_FIX * g_adjusted;
 
@@ -717,5 +854,497 @@ function output_vec = insertVector(originalVector, addVector)
     % Addes as first row of originalVector
 
     output_vec = [addVector; originalVector(1:end-1, :)];
+
+end
+
+function state_dot = NoError_FixedInt(t, a, prev_state)
+
+    % rigidArmControl is the EOM for the 1 DOF model of the inertially
+    % stabilized platform. It uses inertial acceleration control when the
+    % platform is close to the center of the operation region, and uses PID
+    % control on the relative position as the platform goes closer to the
+    % operational bounderies
+    %
+    % Inputs:   t    = current time
+    %           a    = structure containing environmental constants and gain
+    %                  values
+    %           s    = vector of states
+    %                = [pi; p_dot; p_err_accum; pm; pm_dot; pm_ddot] 
+    %                  - pi: platform inertial position 
+    %                  - p_dot: platform inertial velocity
+    %                  - p_err_accum: platform relative position correction accumulation
+    %                  - pm: measured platform relative position
+    %                  - pm_dot: measured platform inertial velocity 
+    %                  - pm_ddot: measured platform intertial acceleration
+    % Outputs:  sdot = time derivative of input state vector
+    %                = [p_dot; p_ddot; pr_err] where pdot is the inertial 
+    %                  velocity of the platform, p_ddot is the inertial 
+    %                  acceleration of the platform,and pr_err is the error in 
+    %                  the relative position of the platform
+    
+    % Current states
+    pi = prev_state(1);
+    p_dot = prev_state(2);
+    p_err_accum = prev_state(3);
+    pm = prev_state(4);
+    pm_dot = prev_state(5);
+    pm_ddot = prev_state(6);
+    
+    % Error in relative position (distance to center of operation region)
+    p = pm-a.d(t);
+    p_err = p-a.pr_d;
+    
+    % For testing gains without mixing proportions
+    % ka = a.ka; % Acceleration [kg]
+    % kv = a.kv; % Velocity     [kg/s]
+    % ks = a.ks; % Position     [kg*s^-2]
+    % kp = a.kp; % Proportional [kg*s^-2]
+    % kd = a.kd; % Derivative   [kg/s]
+    % ki = a.ki; % Integral     [kg*s^-3]
+    
+    % Control gain proportions
+    
+    I = a.I(p); % Proportion of inertial stability control to apply
+
+    ka = a.ka*I; % Acceleration [kg]
+    kv = a.kv*I; % Velocity     [kg/s]
+    ks = a.ks*I; % Position     [kg*s^-2]
+    
+    % k = a.K(p);     % Proportion of relative position control to apply
+    k_h = a.K_h(p);     % Proportion of relative position control to apply
+
+    kp = a.kp*k_h;     % Proportional [kg*s^-2]
+    kd = a.kd*k_h;     % Derivative   [kg/s]
+    ki = a.ki*k_h;     % Integral     [kg*s^-3]
+    
+    % Derivative of states
+    state_dot = zeros(6,1);
+    
+    % Derivative of position
+    state_dot(1) = p_dot;  % inertial velocity
+    state_dot(4) = pm_dot; % measured inertial velocity
+    
+    % Control Law
+    
+    % Inertial stability control force
+    c_i = a.initial_scale(t); % Initial scale of gains
+    f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
+    % Relative position control force
+    f_pr = -(kp*p_err + ki*p_err_accum + kd*(pm_dot-a.d_dot(t)));
+    
+    % Platform EOM
+    p_ddot = (f_i+f_pr) / a.m;
+    
+    % Derivative of velocity
+    state_dot(2) = p_ddot; % Inertial acceleration
+    state_dot(5) = pm_ddot; % Measured inertial acceleration
+    
+    % Derivative of measured inertial acceleration
+    state_dot(6) = a.omega*(p_ddot - pm_ddot);
+    
+    % Error in relative position
+    state_dot(3) = p_err;
+    
+    err_v=abs(p_dot-pm_dot);
+    err_a=abs(p_ddot-pm_ddot);
+
+end
+
+function state_dot = rigidArmControl_FixedInt(t, a, prev_state)
+    % rigidArmControl is the EOM for the 1 DOF model of the inertially
+    % stabilized platform. It uses inertial acceleration control when the
+    % platform is close to the center of the operation region, and uses PID
+    % control on the relative position as the platform goes closer to the
+    % operational bounderies
+    %
+    % Inputs:   t    = current time
+    %           s    = vector of states
+    %                = [p; p_dot; pr_err_accum] where p is the inertial position 
+    %                  of the platform, pdot is the inertial velocity of the 
+    %                  platform, and pr_err_accum is the integral of the error 
+    %                  in the relative position of the platform
+    %           a    = structure containing environmental constants and gain
+    %                  values
+    % Outputs:  sdot = time derivative of input state vector
+    %                = [p_dot; p_ddot; pr_err] where pdot is the inertial 
+    %                  velocity of the platform, p_ddot is the inertial 
+    %                  acceleration of the platform,and pr_err is the error in 
+    %                  the relative position of the platform
+    
+    % Current states
+    p = prev_state(1);
+    p_dot = prev_state(2);
+    pr_err_accum = prev_state(3);
+    pm = prev_state(4);
+    pm_dot = prev_state(5);
+    pm_ddot = prev_state(6);
+    p_theta = prev_state(7);
+    
+    specs = a.specs;
+    
+    p_thetadot = 1/(pm_dot^2 + 1);
+    
+    
+    
+    % Inserting measured accel manually ---------------------------------------
+    sz = 3;
+    if t > specs.accel_resolution
+    
+        measured_a_x = a.measured_accel_horz(t, a.o_d_n_a_c_h, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, a.real_accel, a.theta_err);
+        measured_a_y = measured_a_x;
+        measured_a_z = a.measured_accel_vert(t, a.o_d_n_a_c_v, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, a.real_accel, a.theta_err);
+    
+        measured_g_x = a.measured_gyro(t, a.o_d_n_g_c, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, a.real_ang_rate);
+        measured_g_y = measured_g_x;
+        measured_g_z = measured_g_x;
+    
+        measuredState = [measured_a_x measured_a_y measured_a_z measured_g_x measured_g_y measured_g_z];
+        corrected_a = compensateError(measuredState, specs, t);
+    
+        pm_ddot_error = pm_ddot - corrected_a(3);
+        p_thetadot_error = p_thetadot - corrected_a(4);
+    
+        pm_ddot = pm_ddot + (pm_ddot_error/1);
+        p_thetadot = p_thetadot + (p_thetadot_error/1);
+    
+        % pm_ddot = corrected_a(3);
+        % p_thetadot = corrected_a(4);
+    
+        % scatter(a.fi1, t, a_error, "red")
+        % hold on
+        % 
+        % scatter(a.fi1, t, pm_ddot, "blue")
+        % hold on
+        % 
+        % scatter(a.fi1, t, corrected_a(3), "green")
+        % hold on
+    
+    end
+    
+    
+    % scatter(a.fi1, t, corrected_a(1), sz, "filled", color='blue')
+    % hold on
+    % scatter(a.fi1, t, corrected_a(3), sz, color='blue')
+    % hold on
+    
+    % 
+    % error = abs(corrected_a(3) - p_ddot);
+    % scatter(a.fi1, t, error, sz, "red")
+    % hold on
+    % scatter(a.fi3, t, corrected_a(4), sz, "filled", color='blue')
+    % hold on
+    
+    % ----------------------------------------------------------------------------------------------
+    
+    % Error in relative position (distance to center of operation region)
+    pr = pm-a.d(t);
+    pr_err = pr-a.pr_d;
+    
+    % For testing gains without mixing proportions
+    % ka = a.ka; % Acceleration [kg]
+    % kv = a.kv; % Velocity     [kg/s]
+    % ks = a.ks; % Position     [kg*s^-2]
+    % kp = a.kp; % Proportional [kg*s^-2]
+    % kd = a.kd; % Derivative   [kg/s]
+    % ki = a.ki; % Integral     [kg*s^-3]
+    
+    % Control gain proportions
+    
+    I = a.I(pr); % Proportion of inertial stability control to apply
+    % I = 0.5;
+    
+    ka = a.ka*I; % Acceleration [kg]
+    kv = a.kv*I; % Velocity     [kg/s]
+    ks = a.ks*I; % Position     [kg*s^-2]
+    
+    k = a.K(pr);     % Proportion of relative position control to apply
+    k_h = a.K_h(pr);
+    % k_h =  0.5;
+    
+    kp = a.kp*k_h;     % Proportional [kg*s^-2]
+    kd = a.kd*k_h;     % Derivative   [kg/s]
+    ki = a.ki*k_h;     % Integral     [kg*s^-3]
+    
+    % Derivative of states
+    state_dot = zeros(7,1);
+    
+    % Derivative of position
+    state_dot(1) = p_dot;  % inertial velocity
+    state_dot(4) = pm_dot; % measured inertial velocity
+    
+    % Control Law
+    
+    % Inertial stability control force
+    c_i = a.initial_scale(t); % Initial scale of gains
+    f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
+    % Relative position control force
+    f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(pm_dot-a.d_dot(t)));
+    
+    % Platform EOM
+    p_ddot = (f_i+f_pr) / a.m;
+    
+    % scatter(a.fi1, t, p_ddot, sz, "blue")
+    % hold on
+    
+    % Derivative of velocity
+    state_dot(2) = p_ddot; % Inertial acceleration
+    state_dot(5) = pm_ddot; % Measured inertial acceleration
+    
+    % Derivative of measured inertial acceleration
+    state_dot(6) = a.omega*(p_ddot - pm_ddot);
+    
+    % Error in relative position
+    state_dot(3) = pr_err;
+    
+    % Derivative of angle
+    state_dot(7) = p_thetadot; % Angular Rate
+    
+    err_v=abs(p_dot-pm_dot);
+    err_a=abs(p_ddot-pm_ddot);
+
+    % t
+
+end
+
+function s_dot = noError_ODEFunc(t, s, a)
+% rigidArmControl is the EOM for the 1 DOF model of the inertially
+% stabilized platform. It uses inertial acceleration control when the
+% platform is close to the center of the operation region, and uses PID
+% control on the relative position as the platform goes closer to the
+% operational bounderies
+%
+% Inputs:   t    = current time
+%           s    = vector of states
+%                = [p; p_dot; pr_err_accum] where p is the inertial position 
+%                  of the platform, pdot is the inertial velocity of the 
+%                  platform, and pr_err_accum is the integral of the error 
+%                  in the relative position of the platform
+%           a    = structure containing environmental constants and gain
+%                  values
+% Outputs:  sdot = time derivative of input state vector
+%                = [p_dot; p_ddot; pr_err] where pdot is the inertial 
+%                  velocity of the platform, p_ddot is the inertial 
+%                  acceleration of the platform,and pr_err is the error in 
+%                  the relative position of the platform
+
+% Current states
+p = s(1);
+p_dot = s(2);
+pr_err_accum = s(3);
+pm = s(4);
+pm_dot = s(5);
+pm_ddot = s(6);
+
+% Error in relative position (distance to center of operation region)
+pr = pm-a.d(t);
+pr_err = pr-a.pr_d;
+
+% For testing gains without mixing proportions
+% ka = a.ka; % Acceleration [kg]
+% kv = a.kv; % Velocity     [kg/s]
+% ks = a.ks; % Position     [kg*s^-2]
+% kp = a.kp; % Proportional [kg*s^-2]
+% kd = a.kd; % Derivative   [kg/s]
+% ki = a.ki; % Integral     [kg*s^-3]
+
+% Control gain proportions
+
+I = a.I(pr); % Proportion of inertial stability control to apply
+ka = a.ka*I; % Acceleration [kg]
+kv = a.kv*I; % Velocity     [kg/s]
+ks = a.ks*I; % Position     [kg*s^-2]
+
+k = a.K(pr);     % Proportion of relative position control to apply
+k_h = a.K_h(pr);
+kp = a.kp*k_h;     % Proportional [kg*s^-2]
+kd = a.kd*k_h;     % Derivative   [kg/s]
+ki = a.ki*k_h;     % Integral     [kg*s^-3]
+
+% Derivative of states
+s_dot = zeros(6,1);
+
+% Derivative of position
+s_dot(1) = p_dot;  % inertial velocity
+s_dot(4) = pm_dot; % measured inertial velocity
+
+% Control Law
+
+% Inertial stability control force
+c_i = a.initial_scale(t); % Initial scale of gains
+f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
+% Relative position control force
+f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(pm_dot-a.d_dot(t)));
+
+% Platform EOM
+p_ddot = (f_i+f_pr) / a.m;
+
+% Derivative of velocity
+s_dot(2) = p_ddot; % Inertial acceleration
+s_dot(5) = pm_ddot; % Measured inertial acceleration
+
+% Derivative of measured inertial acceleration
+s_dot(6) = a.omega*(p_ddot - pm_ddot) ;
+
+% Error in relative position
+s_dot(3) = pr_err;
+
+% s_dot
+
+err_v=abs(p_dot-pm_dot);
+err_a=abs(p_ddot-pm_ddot);
+
+end
+
+function s_dot = rigidArmControl_ODEFunc(t, s, a)
+% rigidArmControl is the EOM for the 1 DOF model of the inertially
+% stabilized platform. It uses inertial acceleration control when the
+% platform is close to the center of the operation region, and uses PID
+% control on the relative position as the platform goes closer to the
+% operational bounderies
+%
+% Inputs:   t    = current time
+%           s    = vector of states
+%                = [p; p_dot; pr_err_accum] where p is the inertial position 
+%                  of the platform, pdot is the inertial velocity of the 
+%                  platform, and pr_err_accum is the integral of the error 
+%                  in the relative position of the platform
+%           a    = structure containing environmental constants and gain
+%                  values
+% Outputs:  sdot = time derivative of input state vector
+%                = [p_dot; p_ddot; pr_err] where pdot is the inertial 
+%                  velocity of the platform, p_ddot is the inertial 
+%                  acceleration of the platform,and pr_err is the error in 
+%                  the relative position of the platform
+
+% Current states
+p = s(1);
+p_dot = s(2);
+pr_err_accum = s(3);
+pm = s(4);
+pm_dot = s(5);
+pm_ddot = s(6);
+p_theta = s(7);
+
+specs = a.specs;
+
+p_thetadot = 1/(pm_dot^2 + 1);
+
+
+
+% Inserting measured accel manually ---------------------------------------
+sz = 3;
+if t > specs.accel_resolution
+
+    measured_a_x = a.measured_accel_horz(t, a.o_d_n_a_c_h, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, a.real_accel, a.theta_err);
+    measured_a_y = measured_a_x;
+    measured_a_z = a.measured_accel_vert(t, a.o_d_n_a_c_v, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, a.real_accel, a.theta_err);
+
+    measured_g_x = a.measured_gyro(t, a.o_d_n_g_c, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, a.real_ang_rate);
+    measured_g_y = measured_g_x;
+    measured_g_z = measured_g_x;
+
+    measuredState = [measured_a_x measured_a_y measured_a_z measured_g_x measured_g_y measured_g_z];
+    corrected_a = compensateError(measuredState, specs, t);
+
+    pm_ddot_error = pm_ddot - corrected_a(3);
+    p_thetadot_error = p_thetadot - corrected_a(4);
+
+    pm_ddot = pm_ddot + (pm_ddot_error/1);
+    p_thetadot = p_thetadot + (p_thetadot_error/1);
+
+    % pm_ddot = corrected_a(3);
+    % p_thetadot = corrected_a(4);
+
+    % scatter(a.fi1, t, a_error, "red")
+    % hold on
+    % 
+    % scatter(a.fi1, t, pm_ddot, "blue")
+    % hold on
+    % 
+    % scatter(a.fi1, t, corrected_a(3), "green")
+    % hold on
+
+end
+
+
+% scatter(a.fi1, t, corrected_a(1), sz, "filled", color='blue')
+% hold on
+% scatter(a.fi1, t, corrected_a(3), sz, color='blue')
+% hold on
+
+% 
+% error = abs(corrected_a(3) - p_ddot);
+% scatter(a.fi1, t, error, sz, "red")
+% hold on
+% scatter(a.fi3, t, corrected_a(4), sz, "filled", color='blue')
+% hold on
+
+% ----------------------------------------------------------------------------------------------
+
+% Error in relative position (distance to center of operation region)
+pr = pm-a.d(t);
+pr_err = pr-a.pr_d;
+
+% For testing gains without mixing proportions
+% ka = a.ka; % Acceleration [kg]
+% kv = a.kv; % Velocity     [kg/s]
+% ks = a.ks; % Position     [kg*s^-2]
+% kp = a.kp; % Proportional [kg*s^-2]
+% kd = a.kd; % Derivative   [kg/s]
+% ki = a.ki; % Integral     [kg*s^-3]
+
+% Control gain proportions
+
+I = a.I(pr); % Proportion of inertial stability control to apply
+% I = 0.5;
+
+ka = a.ka*I; % Acceleration [kg]
+kv = a.kv*I; % Velocity     [kg/s]
+ks = a.ks*I; % Position     [kg*s^-2]
+
+k = a.K(pr);     % Proportion of relative position control to apply
+k_h = a.K_h(pr);
+% k_h =  0.5;
+
+kp = a.kp*k_h;     % Proportional [kg*s^-2]
+kd = a.kd*k_h;     % Derivative   [kg/s]
+ki = a.ki*k_h;     % Integral     [kg*s^-3]
+
+% Derivative of states
+s_dot = zeros(7,1);
+
+% Derivative of position
+s_dot(1) = p_dot;  % inertial velocity
+s_dot(4) = pm_dot; % measured inertial velocity
+
+% Control Law
+
+% Inertial stability control force
+c_i = a.initial_scale(t); % Initial scale of gains
+f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
+% Relative position control force
+f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(pm_dot-a.d_dot(t)));
+
+% Platform EOM
+p_ddot = (f_i+f_pr) / a.m;
+
+% scatter(a.fi1, t, p_ddot, sz, "blue")
+% hold on
+
+% Derivative of velocity
+s_dot(2) = p_ddot; % Inertial acceleration
+s_dot(5) = pm_ddot; % Measured inertial acceleration
+
+% Derivative of measured inertial acceleration
+s_dot(6) = a.omega*(p_ddot - pm_ddot);
+
+% Error in relative position
+s_dot(3) = pr_err;
+
+% Derivative of angle
+s_dot(7) = p_thetadot; % Angular Rate
+
+err_v=abs(p_dot-pm_dot);
+err_a=abs(p_ddot-pm_ddot);
 
 end

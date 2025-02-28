@@ -60,7 +60,7 @@ sz = 3;
 
 % Simulation time
 startTime = 0;
-finishTime = 30;
+finishTime = 10;
 tspan = [startTime finishTime]; % [s]
 dt = 0.01;  % [s]
 t = (tspan(1):dt:tspan(2))';
@@ -86,17 +86,18 @@ accel_tau = 2; % [s]
 driftPeriod = 2;  % drift changes every 5 seconds
 driftAlterations = floor(tspan(2)/driftPeriod)+1; % drift changes every 5 minutes
 
-b_a_drift_vals = b_a.*rand(driftAlterations,1);
-b_g_drift_vals = b_g.*rand(driftAlterations,1);
+% b_a_drift_vals = b_a.*rand(driftAlterations,1);
+% b_g_drift_vals = b_g.*rand(driftAlterations,1);
 
-% b_a_drift_vals = b_a.*ones(driftAlterations,1);
-% b_g_drift_vals = b_g.*ones(driftAlterations,1);
+b_a_drift_vals = b_a.*ones(driftAlterations,1);
+b_g_drift_vals = b_g.*ones(driftAlterations,1);
 
 bias_indeces = floor(t./(length(t)/driftAlterations)*100)+1;
 
 a.biasStabDistAccel = b_a_drift_vals(bias_indeces);
 a.biasStabDistGyro = b_g_drift_vals(bias_indeces);
 
+figure
 subplot(2,1,1)
 plot(t, a.biasStabDistAccel);
 hold on
@@ -205,7 +206,7 @@ op = odeset('RelTol',tolerance,'AbsTol',tolerance); % Tolerance options
 % plot(a.fi1, t,a.real_accel(t), color='black')
 
 % Feeding states back through EOM to calculating inertial acceleration of
-% the platfor
+% the platform
 p_ddot = zeros(size(t));
 p_theta = zeros(size(t));
 for i = 1:length(t)
@@ -631,8 +632,8 @@ function state = compensateError(measuredState, specs, time)
     ACCEL_BIAS = [b_a b_a b_a]';
     GYRO_BIAS = [b_g b_g b_g]';
 
-    theta_err = b_g/2*time + ARW*sqrt(time);
-    % theta_err = b_g*time + ARW*sqrt(time);
+    % theta_err = b_g/2*time + ARW*sqrt(time);
+    theta_err = b_g*time + ARW*sqrt(time);
 
     a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1) - g*sin(theta_err);
     a_adjusted_z = measured_accel(3) - ACCEL_BIAS(3) - g*(1-cos(theta_err));

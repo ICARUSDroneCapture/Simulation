@@ -11,16 +11,16 @@ specs.accel_noiseDensity = 60 * 10^-6 * a.g; % m/s^2/sqrt(Hz)
 specs.accel_bandwidth = 218; % Hz
 specs.accel_temp_bias = 3.7 / 1000 * a.g; % m/s^2 RMS
 
-specs.gyro_resolution = 0.0076 / 180*pi; % rad/s
+specs.gyro_resolution = 0.0076; % rad/s
 specs.gyro_samplingRate = 8000; % Hz
-specs.gyro_noiseDensity = 5 * (10^-3) / 180*pi; % rad/s/sqrt(Hz)
+specs.gyro_noiseDensity = 5 * (10^-3); % rad/s/sqrt(Hz)
 specs.gyro_bandwidth = 250; % Hz
-specs.gyro_temp_bias = 0.3 / 180*pi; % rad/s RMS
+specs.gyro_temp_bias = 0.3; % rad/s RMS
 
 % Accel Specs
 specs.b_a = 0.019 / 1000 * a.g; % Time Varying Bias (m/s^-2)
 specs.VRW = 0.02 / 60; % Velocity Random Walk (m/s/sqrt(s))
 
 % Gyro Specs
-specs.b_g = 1.5 / 3600 / 180*pi; % Time Varying Bias (rad/s)
-specs.ARW = 0.16 / 60 / 180*pi; % Angle Random Walk (rad/sqrt(s))
+specs.b_g = 1.5 / 3600; % Time Varying Bias (rad/s)
+specs.ARW = 0.16 / 60; % Angle Random Walk (rad/sqrt(s))

@@ -1,4 +1,4 @@
-close all; clear; clc;
+Aclose all; clear; clc;
 
 sampling_rate = 10; %1 Hz
 time_step = 1/sampling_rate;

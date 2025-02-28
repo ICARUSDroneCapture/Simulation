@@ -8,19 +8,14 @@ a.pr_d = 0.5; % Desired relative position [m]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Environmental Model %%%%%%%%%%%%%%%%%%%%
 
-alpha = 0.2; % wave amplitdue [m]
+alpha = 0.5; % wave amplitdue [m]
 hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
 
 % Wave frequency
-t_min = 6;     % Minimum period [s]
-t_max = 9;    % Maximum period [s]
-
-Tmax = 7.5;    % Expected period [s]
+Tmax = 7.5;    % Maximum period [s]
 k = 1;
 T = Tmax / k;  % Period of deck disturbance [s]
 beta = 2*pi/T; % wave frequency [rad/s]
-beta_min = 1/t_min; % Maximum frequency [Hz]
-beta_max = 1/t_max; % Minimum frequency [Hz]
 
 % Inertial Position, Velocity, and Acceleration of Deck
 
@@ -55,8 +50,8 @@ a.d_ddot = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
 % a.d_ddot = @(t) -alpha*(0.0417*beta^2*sin(beta*t/6) ...
 %                                     + 0.75*beta^2*sin(beta*t)); % [m*s^-2]
 
-a.theta = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
-a.theta_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1); % [rad]
+a.a = @(t) atand(beta*alpha*cosd(beta*t)); % [rad]
+a.a_dot = @(t) -(alpha*beta^2*sind(beta*t))/(alpha^2*beta^2*(cosd(beta*t)^2)+1); % [rad]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%% Control Gains %%%%%%%%%%%%%%%%%%%%%%%
@@ -68,33 +63,17 @@ a.theta_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1
 % Inertial Stabilization Control
 % a.ka = 700;  % Acceleration Control [kg]
 % a.kv = 5000;  % Velocity Control [kg/s]
-% a.ks = 0;  % Position Control [kg*s^-2]
+% a.ks = 0;  % Position Control [kg*s^-2] 
 
 % Relative Position Control
-a.kp = 8;  % Proportional [N/m]
-a.kd = 1;  % Derivative [Ns/m]    
+a.kp = 10;  % Proportional [N/m]
+a.kd = 2;  % Derivative [Ns/m]    
 a.ki = 0;  % Integral [N/ms]
 
-% % Inertial Stabilization Control
+% Inertial Stabilization Control
 a.ka =  1;  % Acceleration Control [kg]
-a.kv = 0;  % Velocity Control [kg/s]
+a.kv = 2;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2]
-
-% Sensor Drift Control
-a.kw = 1200; % 
-a.kt = 0.6; % 
-
-scale_w = 1;
-scale_t = 1;
-
-% scale_w = 1.2;
-% scale_t = 0.05;
-
-% a.kw = scale_w*beta_min; % 
-% a.kt = scale_t*beta_max; % 
-
-% a.kw = 0.5; % 
-% a.kt = 0.5; % 
 
 % % Inertial Stabilization Control
 % a.ka =  0.98;  % Acceleration Control [kg]
