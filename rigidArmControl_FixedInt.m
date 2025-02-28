@@ -39,7 +39,8 @@ function state_dot = rigidArmControl_FixedInt(t, a, prev_state)
     
     % ----------------- Inserting measured accel manually -----------------
 
-    curr_angle = a.real_ang(t);
+    % curr_angle = a.real_ang(t);
+    curr_angle = p_theta;
     measuredState = insertAllError(t, a);
 
     accel_state = measuredState(1:3);
