@@ -12,15 +12,15 @@ alpha = 0.2; % wave amplitdue [m]
 hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
 
 % Wave frequency
-t_min = 6;     % Minimum period [s]
+t_min = 2.5;     % Minimum period [s]
 t_max = 9;    % Maximum period [s]
 
 Tmax = 7.5;    % Expected period [s]
 k = 1;
 T = Tmax / k;  % Period of deck disturbance [s]
 beta = 2*pi/T; % wave frequency [rad/s]
-beta_min = 1/t_min; % Maximum frequency [Hz]
-beta_max = 1/t_max; % Minimum frequency [Hz]
+a.beta_min = 1/t_min; % Maximum frequency [Hz]
+a.beta_max = 1/t_max; % Minimum frequency [Hz]
 
 % Inertial Position, Velocity, and Acceleration of Deck
 
@@ -84,14 +84,14 @@ a.ks = 0;  % Position Control [kg*s^-2]
 a.kw = 1200; % 
 a.kt = 0.6; % 
 
-scale_w = 1;
-scale_t = 1;
+% scale_w = 1;
+% scale_t = 1;
 
 % scale_w = 1.2;
-% scale_t = 0.05;
+% scale_t = 0.1;
 
-% a.kw = scale_w*beta_min; % 
-% a.kt = scale_t*beta_max; % 
+% a.kw = scale_w*a.beta_min; % 
+% a.kt = scale_t*a.beta_max; % 
 
 % a.kw = 0.5; % 
 % a.kt = 0.5; % 

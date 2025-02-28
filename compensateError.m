@@ -1,4 +1,4 @@
-function state = compensateError(measuredState, specs, time)
+function state = compensateError(measuredState, specs, time, curr_angle)
     k = specs.k;
     dk = specs.dk;
     b_a = specs.b_a;
@@ -49,8 +49,8 @@ function state = compensateError(measuredState, specs, time)
     theta_err = b_g/2*time + ARW*sqrt(time);
     % theta_err = b_g*time + ARW*sqrt(time);
 
-    a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1) - g*sin(theta_err);
-    a_adjusted_z = measured_accel(3) - ACCEL_BIAS(3) - g*(1-cos(theta_err));
+    a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1);
+    a_adjusted_z = measured_accel(3) - ACCEL_BIAS(3);
     a_adjusted = [a_adjusted_x_y; a_adjusted_x_y; a_adjusted_z];
 
     % Adding calibration error of around 2 bits of accuracy

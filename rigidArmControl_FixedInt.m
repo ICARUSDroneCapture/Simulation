@@ -39,7 +39,11 @@ function state_dot = rigidArmControl_FixedInt(t, a, prev_state)
     
     % ----------------- Inserting measured accel manually -----------------
 
+    curr_angle = a.real_ang(t);
     measuredState = insertAllError(t, a);
+
+    accel_state = measuredState(1:3);
+    measuredState(1:3) = AccelRemoveGrav(accel_state, curr_angle, a);
 
     % Compensate for constant error values
     corrected_a = compensateError(measuredState, specs, t);

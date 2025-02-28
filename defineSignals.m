@@ -126,8 +126,8 @@ a.biasTempDistGyro = @(t) gyro_bias_temp_norm(floor(t./dt)+1);
 
 a.theta_err = @(t) a.biasStabDistGyro(t).*t + ARW.*sqrt(t);
 
-a.accel_drift_vert = @(t, accel, theta_err, biasStabDistAccel, biasTempDistAccel) (1 + k)*accel + biasStabDistAccel(t)  + biasTempDistAccel(t) + g*(1-cos(theta_err(t))) + accel_turn_on_bias_offset;
-a.accel_drift_horz = @(t, accel, theta_err, biasStabDistAccel, biasTempDistAccel) (1 + k)*accel + biasStabDistAccel(t)  + biasTempDistAccel(t)  + g*sin(theta_err(t)) + accel_turn_on_bias_offset;
+a.accel_drift_vert = @(t, accel, real_ang, biasStabDistAccel, biasTempDistAccel) ((1 + k)*accel + biasStabDistAccel(t)  + biasTempDistAccel(t) + accel_turn_on_bias_offset) * cos(real_ang(t));
+a.accel_drift_horz = @(t, accel, real_ang, biasStabDistAccel, biasTempDistAccel) -((1 + k)*accel + biasStabDistAccel(t)  + biasTempDistAccel(t) + accel_turn_on_bias_offset + a.g) * cos(real_ang(t));
 
 a.gyro_drift = @(t, ang_rate, biasStabDistGyro, biasTempDistGyro) (1 + k)*ang_rate + a.biasStabDistGyro(t) + biasTempDistGyro(t) + gyro_turn_on_bias_offset;
 
@@ -137,14 +137,14 @@ a.gyro_drift = @(t, ang_rate, biasStabDistGyro, biasTempDistGyro) (1 + k)*ang_ra
 % o_d_n_a_c_h: offset drifting noisy accel curve horz
 % o_d_n_g_c: offset drifting noisy gyro curve
 
-a.o_d_n_a_c_v = @(t, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err) accel_drift_vert(t, real_accel, theta_err, biasStabDistAccel, biasTempDistAccel) + noiseDistAccel(t);
-a.o_d_n_a_c_h = @(t, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err) accel_drift_horz(t, real_accel, theta_err, biasStabDistAccel, biasTempDistAccel) + noiseDistAccel(t);
+a.o_d_n_a_c_v = @(t, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang) accel_drift_vert(t, real_accel, real_ang, biasStabDistAccel, biasTempDistAccel) + noiseDistAccel(t);
+a.o_d_n_a_c_h = @(t, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, real_ang) accel_drift_horz(t, real_accel, real_ang, biasStabDistAccel, biasTempDistAccel) + noiseDistAccel(t);
 a.o_d_n_g_c = @(t, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_drift(t, real_ang_rate, biasStabDistGyro, biasTempDistGyro) + noiseDistGyro(t);
 
-a.measured_accel_vert = @(t, o_d_n_a_c_v, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err) accel_resolution*floor(o_d_n_a_c_v(t, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, theta_err)/accel_resolution);
-a.measured_accel_horz = @(t, o_d_n_a_c_h, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err) accel_resolution*floor(o_d_n_a_c_h(t, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, theta_err)/accel_resolution);
+a.measured_accel_vert = @(t, o_d_n_a_c_v, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang) accel_resolution*floor(o_d_n_a_c_v(t, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang)/accel_resolution);
+a.measured_accel_horz = @(t, o_d_n_a_c_h, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, real_ang) accel_resolution*floor(o_d_n_a_c_h(t, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, real_ang)/accel_resolution);
 a.measured_gyro = @(t, o_d_n_g_c, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_resolution*floor(o_d_n_g_c(t, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate)/gyro_resolution);
 
-% measured_accel_vert = a.measured_accel_vert(t, a.o_d_n_a_c_v, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, a.real_accel, a.theta_err);
-% measured_accel_horz = a.measured_accel_horz(t, a.o_d_n_a_c_h, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, a.real_accel, a.theta_err);
+% measured_accel_vert = a.measured_accel_vert(t, a.o_d_n_a_c_v, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, a.real_accel, a.real_ang);
+% measured_accel_horz = a.measured_accel_horz(t, a.o_d_n_a_c_h, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, a.real_accel, a.real_ang);
 % measured_gyro = a.measured_gyro(t, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, a.real_ang_rate);

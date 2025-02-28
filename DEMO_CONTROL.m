@@ -15,8 +15,8 @@ close all;
 a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
 a.real_vel = @(t) beta*alpha*cos(beta*t);
 a.real_accel = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
-a.real_ang = @(t) atan(beta*alpha*cos(beta*t)); % [deg]
-a.real_ang_rate = @(t) 180/pi*(-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [deg/s]
+a.real_ang = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
+a.real_ang_rate = @(t) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
 
 % Testing simple equations to verify integration
 
@@ -32,7 +32,7 @@ dynamics = @(t, y) [ t.^2; 2/3*t.^3 ]; % [ real_accel real_ang_rate]
 
 % Simulation time
 startTime = 0;
-finishTime = 20;
+finishTime = 10;
 tspan = [startTime finishTime]; % [s]
 
 % dt = 1/imu_rate;  % [s]
