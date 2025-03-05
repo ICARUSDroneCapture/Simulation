@@ -10,9 +10,9 @@ a.pr_d = 0.5; % Desired relative position [m]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Environmental Model %%%%%%%%%%%%%%%%%%%%
 
-a.tspan = [0 30];
+a.tspan = [0 80];
 
-alpha = 0.2; % wave amplitdue [m]
+alpha = 0.25; % wave amplitdue [m]
 hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
 
 % Wave frequency

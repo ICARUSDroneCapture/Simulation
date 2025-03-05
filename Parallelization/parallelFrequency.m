@@ -8,14 +8,14 @@ n_max = 15;
 isolation = zeros(1,n_max);
 max_wave = 2*pi/Tmax;
 betas = linspace(beta_min, beta_max, n_max);
-beta_wave = max_wave;
+beta_wave = 1.46;
 [~, wave_idx] = min(abs(betas-beta_wave));
 
 % Computation time: 12.8444 hrs
 % acceleration_gains = 10000:1000:25000;
 % rel_prop_gains = 0:250:2000;
 % rel_deriv_gains = 3000:100:4500;
-% rel_int_gains = 10:5:50;
+% rel_int_gains = 0:5:50;
 % B_scale = 0:0.2:1;
 % r_g = 0.2:0.1:0.5; 
 % n_vals = 1:4;
@@ -23,7 +23,7 @@ acceleration_gains = 24000;
 rel_prop_gains = 250;
 rel_deriv_gains = 3000;
 rel_int_gains = 10;
-B_scale = 0.2;
+B_scale = 1;
 r_g = 0.4; 
 n_vals = 4;
 
@@ -108,7 +108,7 @@ parfor idx_all = 1:totalIter
         end
 
 
-        t_test0 = 20;
+        t_test0 = 70;
         if t(end) == atemp.tspan(end)
             x_I = s(t > t_test0, 1);
             x_D = atemp.d(t(t > t_test0));

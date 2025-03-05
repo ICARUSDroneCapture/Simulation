@@ -10,17 +10,23 @@ height = screenSize(4) / 4; % Half the screen height
 figure('Position', [100, 100, width, height]);
 plot(t,s(:,1))
 hold on
-plot(t,a.d(t))
+plot(t, a.d(t))
+plot(t,a.d(t) + 0.5 - a.r_k, '--k')
+plot(t,a.d(t) + 0.5 + a.r_k, '--k')
 title('Inertial Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
-legend('Platform', 'Deck','Location','northeast')
+legend('Platform', 'Deck', 'Inertial Control Bounds','Location','northeast')
 
 figure('Position', [100, height + 200, width, height]);
 plot(t,s(:,1)-a.d(t))
+hold on
+yline(0.5 + a.r_g , '--k')
+yline(0.5 - a.r_g , '--k')
 title('Relative Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
+legend('Relative Position', 'Inertial Control Bounds')
 
 figure('Position', [width + 150, 100, width, height]);
 plot(t,s(:,2))
