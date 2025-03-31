@@ -12,6 +12,8 @@ close all;
 
 % Redefining acceleration/gyro curves for clarity
 
+
+%% Simplifying to just z-direction equations for now
 a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
 a.real_vel = @(t) beta*alpha*cos(beta*t);
 a.real_accel = @(t, y) -beta^2*alpha*sin(beta*t); % [m*s^-2]
@@ -22,7 +24,7 @@ a.real_ang_rate = @(t, y) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(bet
 
 % Simulation time
 startTime = 0;
-finishTime = 60;
+finishTime = 30;
 tspan = [startTime finishTime]; % [s]
 
 % dt = 1/imu_rate;  % [s]
@@ -300,9 +302,15 @@ function s_dot = IMUDriftCorrection(time_i, a, prev_state)
     a_h = a.measured_accel_vert(time_i, a.o_d_n_a_c_v, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, accel_i, a.real_ang);
     a_v = a.measured_accel_horz(time_i, a.o_d_n_a_c_h, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, accel_i, a.real_ang);
     
-    accel_state = [a_h a_h a_v];
+    measured_g = a.measured_gyro(time_i, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, ang_rate_i);
 
+    accel_state = [a_h a_h a_v];
+    
+    % Remove gravity using trig
     corr_a = AccelRemoveGrav(accel_state, curr_angle, a);
+    
+    % Remove gravity using frame rotation and then subtract gravity from z
+    % corr_a = RotateRemoveGrav(accel_state, curr_angle, a);
 
     measured_a_h = corr_a(1);
     measured_a_v = corr_a(3);

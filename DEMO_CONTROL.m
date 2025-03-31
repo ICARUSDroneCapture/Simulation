@@ -15,18 +15,9 @@ close all;
 a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
 a.real_vel = @(t) beta*alpha*cos(beta*t);
 a.real_accel = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
+% a.real_accel = @(t) 0*t; % [m*s^-2]
 a.real_ang = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
 a.real_ang_rate = @(t) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
-
-% Testing simple equations to verify integration
-
-real_vel = @(t, y) 1/3*t.^3;
-real_ang = @(t, y) 1/6*t.^4; % [deg]
-
-real_accel = @(t, y) t.^2; % [m*s^-2]
-real_ang_rate = @(t, y) 2/3*t.^3; % [deg/s]
-
-dynamics = @(t, y) [ t.^2; 2/3*t.^3 ]; % [ real_accel real_ang_rate]
 
 %% Sensor Model Aspects
 
@@ -42,8 +33,11 @@ t_count = length(t);
 indeces = @(t) floor(t/dt)+1;
 
 defineSignals
+% defineSignalsNoNoise
 
 %% Run Control Dynamics Integration
+
+a.dt = dt;
 
 fprintf('\nStarting Integration with NO Sensor Error.')
 fprintf("\nTime: ")
@@ -58,13 +52,13 @@ fprintf("\nTime: ")
 % p_theta0 = a.real_ang(tspan(1)); % Platform inertial angle [deg]
 
 % Initial States
-p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
-p_dot0 = 0;   % Platform velocity [m/s]
-pr_err_accum0 = 0;            % Integral of relative position error [m*s]
-pm0 = p0;                     % Platform inetegrated position [m]
-pm_dot = p_dot0;              % Platform integrated velocity [m/s]
-pm_ddot = 0; % Platform measured acceleration [m*s^-2]
-p_theta0 = 0; % Platform inertial angle [deg]
+p0 =  a.d(tspan(1))+a.pr_d;             % Platform position [m]
+p_dot0 = 0;             % Platform velocity [m/s]
+pr_err_accum0 = 0;                      % Integral of relative position error [m*s]
+pm0 = p0;                               % Platform integrated position [m]
+pm_dot = p_dot0;                        % Platform integrated velocity [m/s]
+pm_ddot = 0;           % Platform measured acceleration [m*s^-2]
+p_theta0 = a.real_ang(tspan(1));   % Platform inertial angle [deg]
 p_theta_err_accum0 = 0;
 
 s0 = [p0 p_dot0 pr_err_accum0 pm0 pm_dot pm_ddot];
@@ -128,6 +122,30 @@ title('Platform Inertial Position over Time')
 legend('Fixed-Step (without sensor error) Integration', 'Fixed-Step (with sensor error) Integration')
 
 
+%% Plotting Platform Angle
+
+figure;
+plot(t_error, 180/pi*a.real_ang(t))
+hold on
+plot(t_error, 180/pi*sol_error(:,7))
+title('Platform Angle vs Time')
+xlabel('Time (s)')
+ylabel('Angle (deg)')
+legend('Fixed-Step (without sensor error) Integration', 'Fixed-Step (with sensor error) Integration')
+
+%% Plotting Platform Acceleration
+
+figure;
+plot(t, a.real_accel(t))
+hold on
+plot(t, sol_error(:,6))
+% ylim([-0.01 0.01])
+title('Platform Inertial Acceleration vs Time')
+xlabel('Time (s)')
+ylabel('Acceleration (m/s^2)')
+title('Platform Inertial Acceleration over Time')
+legend('Deck Disturbance', 'Corrected Acceleration')
+
 %% Getting and Plotting error
 
 pos_err = plat_pos - sol_control(:, 1);
@@ -171,5 +189,3 @@ growth = diff(pos_err);
 % xlabel('Time (s)')
 % ylabel('Error (cm)')
 % legend
-% 
-% 

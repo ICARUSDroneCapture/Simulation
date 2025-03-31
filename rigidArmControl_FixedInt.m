@@ -28,6 +28,7 @@ function state_dot = rigidArmControl_FixedInt(t, a, prev_state)
     pm_ddot = prev_state(6);
     p_theta = prev_state(7);
     p_theta_err_accum = prev_state(8);
+    % pm_ddot_err_accum = prev_state(9);
 
     specs = a.specs;
 
@@ -38,10 +39,10 @@ function state_dot = rigidArmControl_FixedInt(t, a, prev_state)
     pr_err = pr-a.pr_d;
     
     % ----------------- Inserting measured accel manually -----------------
-
-    % curr_angle = a.real_ang(t);
-    curr_angle = p_theta;
+    
     measuredState = insertAllError(t, a);
+    curr_angle = measuredState(4);
+    % curr_angle = a.real_ang(t);
 
     accel_state = measuredState(1:3);
     measuredState(1:3) = AccelRemoveGrav(accel_state, curr_angle, a);
@@ -62,6 +63,19 @@ function state_dot = rigidArmControl_FixedInt(t, a, prev_state)
 
     pm_dot = state_control(3);
     p_theta_err = state_control(4);
+    
+    % % WITH NO ERROR, AND NO ERROR CONTROL, just gravity add and remove
+    % 
+    % measuredState = insertAllError(t, a);
+    % curr_angle = a.real_ang(t);
+    % 
+    % % accel_state = measuredState(1:3);
+    % % measuredState(1:3) = AccelRemoveGrav(accel_state, curr_angle, a);
+    % 
+    % pm_ddot = measuredState(3);
+    % p_thetadot = (a.real_ang(t + a.dt) - a.real_ang(t))/a.dt;
+    % p_theta_err = 0;
+    % p_theta = curr_angle;
     
     % ---------------------------------------------------------------------
     

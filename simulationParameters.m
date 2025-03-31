@@ -71,17 +71,18 @@ a.theta_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1
 % a.ks = 0;  % Position Control [kg*s^-2]
 
 % Relative Position Control
-a.kp = 8;  % Proportional [N/m]
-a.kd = 1;  % Derivative [Ns/m]    
+a.kp = 1.2;  % Proportional [N/m]
+a.kd = 0.4;  % Derivative [Ns/m]    
 a.ki = 0;  % Integral [N/ms]
 
 % % Inertial Stabilization Control
-a.ka =  1;  % Acceleration Control [kg]
-a.kv = 0;  % Velocity Control [kg/s]
+a.ka =  3.4;  % Acceleration Control [kg]
+a.kv = 12;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2]
 
 % Sensor Drift Control
 a.kw = 1200; % 
+% a.kw = 80; % 
 a.kt = 0.6; % 
 
 % scale_w = 1;

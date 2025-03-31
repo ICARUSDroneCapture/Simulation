@@ -4,6 +4,37 @@
 imx_5_specs
 % imx_5_specs_deg
 
+% ------------------------- Zero Everything Out ---------------------------
+
+% specs.k = 0.1; % Scale Factor Error, measured as percentage FSR
+specs.k = 0; % Scale Factor Error, measured as percentage FSR
+specs.dk = 0; % Scale Factor Nonlinearity, %FS
+
+specs.V_err_0 = 0; % Initial Velocity Error
+specs.P_err_0 = 0; % Initial Position Error
+
+specs.accel_resolution = 1*(10^-30); % m/s
+specs.accel_samplingRate = 4000; % Hz
+specs.accel_noiseDensity = 0 * 10^-6 * a.g; % m/s^2/sqrt(Hz)
+specs.accel_bandwidth = 218; % Hz
+specs.accel_temp_bias = 0 / 1000 * a.g; % m/s^2 RMS
+
+specs.gyro_resolution = 1*(10^-30); % rad/s
+specs.gyro_samplingRate = 8000; % Hz
+specs.gyro_noiseDensity = 0 * (10^-3) / 180*pi; % rad/s/sqrt(Hz)
+specs.gyro_bandwidth = 250; % Hz
+specs.gyro_temp_bias = 0 / 180*pi; % rad/s RMS
+
+% Accel Specs
+specs.b_a = 0 / 1000 * a.g; % Time Varying Bias (m/s^-2)
+specs.VRW = 0 / 60; % Velocity Random Walk (m/s/sqrt(s))
+
+% Gyro Specs
+specs.b_g = 0 / 3600 / 180*pi; % Time Varying Bias (rad/s)
+specs.ARW = 0 / 60 / 180*pi; % Angle Random Walk (rad/sqrt(s))
+
+% -------------------------------------------------------------------------
+
 specs.g = a.g;
 a.specs = specs;
 
@@ -43,8 +74,8 @@ accel_noise_std = specs.accel_noiseDensity * sqrt(specs.accel_bandwidth); % Nois
 gyro_noise_std = specs.gyro_noiseDensity * sqrt(specs.gyro_bandwidth); % Noise standard deviation (rad/s)
 
 % Getting noise values based on standard distribution
-a.noiseDistAccel = @(t) accel_noise_std*randn(length(t), 1);
-a.noiseDistGyro = @(t, y) gyro_noise_std*randn(length(t), 1);
+a.noiseDistAccel = @(t) 0*t;
+a.noiseDistGyro = @(t) 0*t;
 
 % Noisy deck signal
 a.noisyAccelCurve = @(t, real_accel) real_accel(t) + accel_noise_std*randn(length(t),1);
@@ -53,8 +84,8 @@ a.noisyGyroCurve = @(t, real_ang_rate) real_ang_rate(t) + gyro_noise_std*randn(l
 %% Adding bias instability
 
 % But first, turn-on bias
-accel_turn_on_bias_offset = 0.1; % m/s^2
-gyro_turn_on_bias_offset = 0.1; % rad
+accel_turn_on_bias_offset = 0; % m/s^2
+gyro_turn_on_bias_offset = 0; % rad
 
 sigma_bias_accel = b_a * sqrt(imu_rate);
 sigma_bias_gyro = b_g * sqrt(imu_rate);
@@ -118,11 +149,17 @@ y_g_filter_temp = filter(B,A,bias_temp__gyro);
 accel_bias_temp_norm = normalize(y_a_filter_temp, "range")*accel_temp_std;
 gyro_bias_temp_norm = normalize(y_g_filter_temp, "range")*gyro_temp_std;
 
-a.biasStabDistAccel = @(t) accel_bias_norm(floor(t./dt)+1);
-a.biasStabDistGyro = @(t) gyro_bias_norm(floor(t./dt)+1);
+% a.biasStabDistAccel = @(t) accel_bias_norm(floor(t./dt)+1);
+% a.biasStabDistGyro = @(t) gyro_bias_norm(floor(t./dt)+1);
 
-a.biasTempDistAccel = @(t) accel_bias_temp_norm(floor(t./dt)+1);
-a.biasTempDistGyro = @(t) gyro_bias_temp_norm(floor(t./dt)+1);
+% a.biasTempDistAccel = @(t) accel_bias_temp_norm(floor(t./dt)+1);
+% a.biasTempDistGyro = @(t) gyro_bias_temp_norm(floor(t./dt)+1);
+
+a.biasStabDistAccel = @(t) 0*t;
+a.biasStabDistGyro = @(t) 0*t;
+
+a.biasTempDistAccel = @(t) 0*t;
+a.biasTempDistGyro = @(t) 0*t;
 
 a.theta_err = @(t) a.biasStabDistGyro(t).*t + ARW.*sqrt(t);
 
@@ -136,7 +173,6 @@ a.gyro_drift = @(t, ang_rate, biasStabDistGyro, biasTempDistGyro) (1 + k)*ang_ra
 
 % o_d_n_a_c_v: offset drifting noisy accel_curve vert
 % o_d_n_a_c_h: offset drifting noisy accel curve horz
-% o_d_n_a_c: offset drifting noisy accel curve
 % o_d_n_g_c: offset drifting noisy gyro curve
 
 a.o_d_n_a_c_v = @(t, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang) accel_drift_vert(t, real_accel, real_ang, biasStabDistAccel, biasTempDistAccel) + noiseDistAccel(t);
@@ -145,11 +181,19 @@ a.o_d_n_a_c_h = @(t, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noi
 a.o_d_n_a_c = @(t, biasStabDistAccel, biasTempDistAccel, accel_drift, noiseDistAccel, real_accel) accel_drift(t, real_accel, biasStabDistAccel, biasTempDistAccel) + noiseDistAccel(t);
 a.o_d_n_g_c = @(t, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_drift(t, real_ang_rate, biasStabDistGyro, biasTempDistGyro) + noiseDistGyro(t);
 
-a.measured_accel_vert = @(t, o_d_n_a_c_v, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang) accel_resolution*floor(o_d_n_a_c_v(t, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang)/accel_resolution);
-a.measured_accel_horz = @(t, o_d_n_a_c_h, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, real_ang) accel_resolution*floor(o_d_n_a_c_h(t, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, real_ang)/accel_resolution);
 
-a.measured_accel = @(t, o_d_n_a_c, biasStabDistAccel, biasTempDistAccel, accel_drift, noiseDistAccel, real_accel) accel_resolution*floor(o_d_n_a_c(t, biasStabDistAccel, biasTempDistAccel, accel_drift, noiseDistAccel, real_accel)/accel_resolution);
-a.measured_gyro = @(t, o_d_n_g_c, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_resolution*floor(o_d_n_g_c(t, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate)/gyro_resolution);
+% a.measured_accel_vert = @(t, o_d_n_a_c_v, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang) accel_resolution*floor(o_d_n_a_c_v(t, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang)/accel_resolution);
+% a.measured_accel_horz = @(t, o_d_n_a_c_h, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, real_ang) accel_resolution*floor(o_d_n_a_c_h(t, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, real_ang)/accel_resolution);
+% 
+% a.measured_accel = @(t, o_d_n_a_c, biasStabDistAccel, biasTempDistAccel, accel_drift, noiseDistAccel, real_accel) accel_resolution*floor(o_d_n_a_c(t, biasStabDistAccel, biasTempDistAccel, accel_drift, noiseDistAccel, real_accel)/accel_resolution);
+% a.measured_gyro = @(t, o_d_n_g_c, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) gyro_resolution*floor(o_d_n_g_c(t, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate)/gyro_resolution);
+
+
+a.measured_accel_vert = @(t, o_d_n_a_c_v, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang) o_d_n_a_c_v(t, biasStabDistAccel, biasTempDistAccel, accel_drift_vert, noiseDistAccel, real_accel, real_ang);
+a.measured_accel_horz = @(t, o_d_n_a_c_h, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, real_ang) o_d_n_a_c_h(t, biasStabDistAccel, biasTempDistAccel, accel_drift_horz, noiseDistAccel, real_accel, real_ang);
+
+a.measured_accel = @(t, o_d_n_a_c, biasStabDistAccel, biasTempDistAccel, accel_drift, noiseDistAccel, real_accel) o_d_n_a_c(t, biasStabDistAccel, biasTempDistAccel, accel_drift, noiseDistAccel, real_accel);
+a.measured_gyro = @(t, o_d_n_g_c, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate) o_d_n_g_c(t, biasStabDistGyro, biasTempDistGyro, gyro_drift, noiseDistGyro, real_ang_rate);
 
 % measured_accel_vert = a.measured_accel_vert(t, a.o_d_n_a_c_v, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, a.real_accel, a.real_ang);
 % measured_accel_horz = a.measured_accel_horz(t, a.o_d_n_a_c_h, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, a.real_accel, a.real_ang);
