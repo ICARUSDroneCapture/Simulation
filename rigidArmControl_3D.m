@@ -1,4 +1,4 @@
-function state_dot = rigidArmControl_FixedInt(t, a, prev_state)
+function state_dot = rigidArmControl_3D(t, a, prev_state)
     % rigidArmControl is the EOM for the 1 DOF model of the inertially
     % stabilized platform. It uses inertial acceleration control when the
     % platform is close to the center of the operation region, and uses PID
