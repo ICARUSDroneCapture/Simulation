@@ -52,15 +52,20 @@ r_I_ref = [0.5;0;0.2];
 r_I = [platform.l1*cos(q1(t)+theta2(t));0;-platform.l1*sin(q1(t)+theta2(t))];
 
 % the jocabain
-J = [-platform.l1*sin(q1(t)+theta2(t));0;-platform.l1*cos(q1(t)+theta2(t))];
+J = [-platform.l1*sin(q1(t));0;-platform.l1*cos(q1(t))];
 
 % inertial acceleration
 p = d+r_I;
 p_ddot = diff(p,'t',2);
 
+R_I_B = [cos(theta2(t)) 0 -sin(theta2(t));
+        0 1 0;
+        sin(theta2(t)) 0 cos(theta2(t))];
+% p_ddot_B = R_I_B*p_ddot;
+
 % gains of inertial stability control (cartesian)
-Ka = 300*1;
-Kv = 375*1;
+Ka = [0; 0; 300*1];
+Kv = [0; 0; 375*1 ];
 
 % gains of relative position control (cartesian)
 Kp = 15*0;
@@ -72,7 +77,8 @@ Kp1 = 4*0;
 Ki1 = 10*0;
 Kd1 = 15*0;
 
-F_control = Kp*(r_I_ref-r_I)+Ki*int(r_I_ref-r_I)+Kd*diff(r_I_ref-r_I)-Ka*p_ddot+Kv*int(-p_ddot);
+F_control = Kp*(r_I_ref-r_I)+Ki*int(r_I_ref-r_I)+Kd*diff(r_I_ref-r_I) ...
+                                - R_I_B*(Ka.*p_ddot + Kv.*int(p_ddot));
 
 tau = J.'*F_control ;
 
