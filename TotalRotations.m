@@ -53,7 +53,6 @@ defineSignals
 
 %% Take derivatives of angle functions manually
 
-
 % Take derivatives of angle functions
 
 theta_vals = a.theta(t);

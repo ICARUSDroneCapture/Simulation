@@ -82,7 +82,6 @@ a.ks = 0;  % Position Control [kg*s^-2]
 
 % Sensor Drift Control
 a.kw = 1200; % 
-% a.kw = 80; % 
 a.kt = 0.6; % 
 
 % scale_w = 1;
