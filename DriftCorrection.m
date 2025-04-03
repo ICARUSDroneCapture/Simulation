@@ -30,7 +30,7 @@ function s_dot = DriftCorrection(a, state, signals)
 
     state_control = curr_state - state_0;
 
-    state_dot_comp = kt * state_err_accum + kw * state_control;
+    state_dot_comp = kt .* state_err_accum + kw .* state_control;
 
     state_dot = state_dot_m + state_dot_0 - state_dot_comp;
 

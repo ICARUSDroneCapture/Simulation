@@ -10,6 +10,40 @@ simulationParameters;
 
 close all;
 
+
+%% 3D Gains
+
+scale_w = 1;
+scale_t = 1;
+
+% a.kw = scale_w*a.beta_min; % 
+% a.kt = scale_t*a.beta_max; % 
+
+T_x = 2*pi/(beta/2); % wave frequency [rad/s] (15 sec)
+T_y = 2*pi/(beta/4); % wave frequency [rad/s] (30 sec)
+T_z = 2*pi/(beta); % wave frequency [rad/s] (7.5 sec)
+
+t_min_x = 2.5;
+t_max_x = 9;
+
+t_min_y = 2.5;
+t_max_y = 9;
+
+t_min_z = 2.5;
+t_max_z = 9;
+
+a.beta_min_x = 1/t_min_x;
+a.beta_min_y = 1/t_min_y;
+a.beta_min_z = 1/t_min_z;
+
+a.beta_max_x = 1/t_max_x;
+a.beta_max_y = 1/t_max_y;
+a.beta_max_z = 1/t_max_z;
+
+a.kw = [scale_t*a.beta_max_x; scale_t*a.beta_max_y; scale_t*a.beta_max_z; scale_t*a.beta_max_x; scale_t*a.beta_max_y; scale_t*a.beta_max_z];
+a.kt = [scale_w*a.beta_min_x; scale_w*a.beta_min_y; scale_w*a.beta_min_z; scale_w*a.beta_min_x; scale_w*a.beta_min_y; scale_w*a.beta_min_z];
+
+
 %% Sensor Model Aspects
 
 % Simulation time
@@ -28,47 +62,29 @@ defineSignals
 
 %% 3D motion equations
 
-a.real_pos_xI = @(t) 0.4/(beta^2)*sin(beta*t/2);
-a.real_pos_yI = @(t) 1.6/(beta^2)*sin(beta*t/4);
+a.real_pos_xI = @(t) alpha*sin(beta*t) + hdeck;
+a.real_pos_yI = @(t) alpha*sin(beta*t) + hdeck;
 a.real_pos_zI = @(t) alpha*sin(beta*t) + hdeck;
 
-a.real_vel_xI = @(t) 0.2/beta*cos(beta/2*t);
-a.real_vel_yI = @(t) 0.4/beta*cos(beta/4*t);
+a.real_vel_xI = @(t) beta*alpha*cos(beta*t);
+a.real_vel_yI = @(t) beta*alpha*cos(beta*t);
 a.real_vel_zI = @(t) beta*alpha*cos(beta*t);
 
-a.real_accel_xI = @(t) -0.1*sin(beta/2*t); % [m*s^-2]
-a.real_accel_yI = @(t) -0.1*sin(beta/4*t); % [m*s^-2]
-a.real_accel_zI = @(t) -beta^2*alpha*sin(beta*t) - 9.81; % [m*s^-2]
+a.real_accel_xI = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
+a.real_accel_yI = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
+a.real_accel_zI = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
 
 % a.theta = @(t) -atan(beta*alpha*cos(beta*t)); % [rad]
 % a.phi = @(t) atan(0.2/beta*cos(beta/2*t)); % [rad]
 % a.psi = @(t) atan(0.4/beta*cos(beta/4*t)); % [rad]
 
+a.psi = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
+a.theta = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
+a.phi = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
 
-a.psi = @(t) -atan(beta*alpha*cos(beta*t)); % [rad]
-a.theta = @(t) atan(0.2/beta*cos(beta/2*t)); % [rad]
-a.phi = @(t) atan(0.4/beta*cos(beta/4*t)); % [rad]
-
-% a.theta_dot = @(t) ((alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
-% a.phi_dot = @(t) ((-0.1*sin(beta/2*t))/(((0.04*(cos(beta*t/2).^2))/(beta^2))+1)); % [rad/s]
-% a.psi_dot = @(t) ((-0.1*sin(beta/4*t))/(((0.16*(cos(beta*t/4).^2))/(beta^2))+1)); % [rad/s]
-
-% Angular rate needs to be taken manually since the derivative equation is +/-
-theta_vals = a.theta(t);
-phi_vals = a.phi(t);
-psi_vals = a.psi(t);
-
-theta_dot = zeros(1, length(t));
-phi_dot = zeros(1, length(t));
-psi_dot = zeros(1, length(t));
-
-theta_dot(2:end) = diff(theta_vals)/dt;
-phi_dot(2:end) = diff(phi_vals)/dt;
-psi_dot(2:end) = diff(psi_vals)/dt;
-
-a.theta_dot_eq = @(t) theta_dot(floor(t./dt)+1);
-a.phi_dot_eq = @(t) phi_dot(floor(t./dt)+1);
-a.psi_dot_eq = @(t) psi_dot(floor(t./dt)+1);
+a.theta_dot_eq = @(t) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
+a.phi_dot_eq = @(t) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
+a.psi_dot_eq = @(t) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
 
 s = @(x) sin(x);
 c = @(x) cos(x);
