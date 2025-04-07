@@ -12,6 +12,23 @@ dz = 0*t; %[m] (DO NOT CHANGE)
 d =[dx;dy;dz];
 d_dot = diff(d,'t');
 
+syms l1
+
+% forward kinematics
+r_I = [l1*cos(q1(t)+theta2(t));0;-l1*sin(q1(t)+theta2(t))];
+
+% the jocabain
+J = [-l1*sin(q1(t));0;-l1*cos(q1(t))];
+
+% inertial acceleration
+p = d+r_I;
+p_ddot = diff(p,'t',2);
+
+R_I_B = [cos(theta2(t)) 0 -sin(theta2(t));
+        0 1 0;
+        sin(theta2(t)) 0 cos(theta2(t))];
+p_ddot_B = simplify(R_I_B*p_ddot)
+
 % defining the rotation matrices
 R1 = [cos(q1(t)+theta2(t)) 0 sin(q1(t)+theta2(t));
       0 1 0;
@@ -154,5 +171,5 @@ G
 % EOM
 EOM = diff(j,'t')+M*diff(q1(t),'t',2)+M_dstar*diff(theta_D,'t',2) ...
     + (C+C_dstar-j_q)*diff(q1(t),'t')+(C_star-j_star_q)*diff(theta_D,'t')...
-    + MU*sign(diff(q1(t),'t'))+B*diff(q1(t),'t')+G == N*tau1(t);
+    + MU*sign(diff(q1(t),'t'))+B*diff(q1(t),'t')+G == N*tau1(t);   
 
