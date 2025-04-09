@@ -27,7 +27,14 @@ p_ddot = diff(p,'t',2);
 R_I_B = [cos(theta2(t)) 0 -sin(theta2(t));
         0 1 0;
         sin(theta2(t)) 0 cos(theta2(t))];
-p_ddot_B = simplify(R_I_B*p_ddot)
+% p_ddot_B = simplify(R_I_B*p_ddot);
+
+syms ka
+Ka = [0 0 0;
+      0 0 0;
+      0 0 ka];
+tau_I = J.'*(-R_I_B*Ka*p_ddot);
+latex(simplify(tau_I))
 
 % defining the rotation matrices
 R1 = [cos(q1(t)+theta2(t)) 0 sin(q1(t)+theta2(t));
