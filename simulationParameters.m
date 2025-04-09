@@ -19,8 +19,8 @@ Tmax = 7.5;    % Expected period [s]
 k = 1;
 T = Tmax / k;  % Period of deck disturbance [s]
 beta = 2*pi/T; % wave frequency [rad/s]
-a.beta_min = 1/t_min; % Maximum frequency [Hz]
-a.beta_max = 1/t_max; % Minimum frequency [Hz]
+a.beta_min = 1/t_max; % Minimum frequency [Hz]
+a.beta_max = 1/t_min; % Maximum frequency [Hz]
 
 % Inertial Position, Velocity, and Acceleration of Deck
 
@@ -79,22 +79,6 @@ a.ki = 0;  % Integral [N/ms]
 a.ka =  3.4;  % Acceleration Control [kg]
 a.kv = 12;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2]
-
-% Sensor Drift Control
-a.kw = 1200; % 
-a.kt = 0.6; % 
-
-% scale_w = 1;
-% scale_t = 1;
-
-% scale_w = 1.2;
-% scale_t = 0.1;
-
-% a.kw = scale_w*a.beta_min; % 
-% a.kt = scale_t*a.beta_max; % 
-
-% a.kw = 0.5; % 
-% a.kt = 0.5; % 
 
 % % Inertial Stabilization Control
 % a.ka =  0.98;  % Acceleration Control [kg]

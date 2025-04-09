@@ -20,19 +20,19 @@ function s_dot = DriftCorrection(a, state, signals)
     kw = a.kw; % 
     kt = a.kt; % 
 
-    state_0 = [0; 0; 0; 0; 0; 0];
-    state_dot_0 = [0; 0; 0; 0; 0; 0];
+    state_nominal = [0; 0; 0; 0; 0; 0];
+    state_dot_nominal = [0; 0; 0; 0; 0; 0];
 
     accel_dot_m = signals(1:3)';
     gyro_dot_m = signals(4:6)';
 
     state_dot_m = [accel_dot_m; gyro_dot_m];
 
-    state_control = curr_state - state_0;
+    state_control = curr_state - state_nominal;
 
     state_dot_comp = kt .* state_err_accum + kw .* state_control;
 
-    state_dot = state_dot_m + state_dot_0 - state_dot_comp;
+    state_dot = state_dot_m + state_dot_nominal - state_dot_comp;
 
     s_dot = zeros(length(state),1);
 

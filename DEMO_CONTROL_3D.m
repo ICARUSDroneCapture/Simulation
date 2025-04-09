@@ -19,17 +19,17 @@ scale_t = 1;
 % a.kw = scale_w*a.beta_min; % 
 % a.kt = scale_t*a.beta_max; % 
 
-T_x = 2*pi/(beta/2); % wave frequency [rad/s] (15 sec)
-T_y = 2*pi/(beta/4); % wave frequency [rad/s] (30 sec)
+T_x = 2*pi/(beta); % wave frequency [rad/s] (15 sec)
+T_y = 2*pi/(beta); % wave frequency [rad/s] (30 sec)
 T_z = 2*pi/(beta); % wave frequency [rad/s] (7.5 sec)
 
-t_min_x = 2.5;
+t_min_x = 2;
 t_max_x = 9;
 
-t_min_y = 2.5;
+t_min_y = 2;
 t_max_y = 9;
 
-t_min_z = 2.5;
+t_min_z = 2;
 t_max_z = 9;
 
 a.beta_min_x = 1/t_min_x;
@@ -42,7 +42,6 @@ a.beta_max_z = 1/t_max_z;
 
 a.kw = [scale_t*a.beta_max_x; scale_t*a.beta_max_y; scale_t*a.beta_max_z; scale_t*a.beta_max_x; scale_t*a.beta_max_y; scale_t*a.beta_max_z];
 a.kt = [scale_w*a.beta_min_x; scale_w*a.beta_min_y; scale_w*a.beta_min_z; scale_w*a.beta_min_x; scale_w*a.beta_min_y; scale_w*a.beta_min_z];
-
 
 %% Sensor Model Aspects
 

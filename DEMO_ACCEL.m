@@ -8,6 +8,10 @@ set(groot,'DefaultLineLineWidth',1)
 
 simulationParameters;
 
+% Sensor Drift Control
+a.kw = 1200; % 
+a.kt = 0.6; % 
+
 close all;
 
 % Redefining acceleration/gyro curves for clarity

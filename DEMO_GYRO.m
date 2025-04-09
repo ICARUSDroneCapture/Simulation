@@ -8,6 +8,12 @@ set(groot,'DefaultLineLineWidth',1)
 
 simulationParameters;
 
+% Sensor Drift Control
+% a.kw = 1200;   % correlated to beta_min
+% a.kt = 0.6;    % correlated to beta_max
+a.kw = a.beta_max - 0.2;
+a.kt = a.beta_min;
+
 close all;
 
 % Redefining acceleration/gyro curves for clarity
@@ -32,12 +38,6 @@ t_count = length(t);
 indeces = @(t) floor(t/dt)+1;
 
 defineSignals
-
-scale_w = 1;
-scale_t = 1;
-
-a.kw = scale_w*a.beta_min; % 
-a.kt = scale_t*a.beta_max; % 
 
 %% Get Error Signal
 
@@ -138,7 +138,8 @@ hold on
 plot(t, a.real_ang_rate(t))
 xlabel('Time (sec)')
 ylabel('Angular Rate (rad/s)')
-legend('Controlled Angular Rate', 'Real Deck Angular Rate')
+title('Gyroscope Angular Velocity')
+legend('Controlled Signal', 'Real Deck Motion')
 
 figure
 plot(t, 180/pi*theta_base)

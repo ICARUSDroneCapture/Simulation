@@ -38,14 +38,14 @@ T_x = 2*pi/(beta/2); % wave frequency [rad/s] (15 sec)
 T_y = 2*pi/(beta/4); % wave frequency [rad/s] (30 sec)
 T_z = 2*pi/(beta); % wave frequency [rad/s] (7.5 sec)
 
-t_min_x = 0.1;
+t_min_x = 13;
 t_max_x = 18;
 
-t_min_y = 0.1;
-t_max_y = 30.1;
+t_min_y = 29;
+t_max_y = 33;
 
-t_min_z = 7.1;
-t_max_z = 30;
+t_min_z = 8;
+t_max_z = 9;
 
 a.beta_min_x = 1/t_min_x;
 a.beta_min_y = 1/t_min_y;
