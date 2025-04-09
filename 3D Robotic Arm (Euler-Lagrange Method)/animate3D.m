@@ -1,7 +1,7 @@
-function animate3D(t_vec,y,d,theta_D)
+function animate3D(t_vec,y,platform,d,theta_D)
     
     %calling the robotic arm constants
-    constants;
+    % constants;
 
     pause(1);
     

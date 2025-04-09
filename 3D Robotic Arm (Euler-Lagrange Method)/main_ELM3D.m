@@ -22,7 +22,7 @@ d_ddot = diff(d,'t',2);
 
 % the deck rotations
 angle1 = 0*t; % deck rotation about its x-axis [rad]
-angle2 = 0*t;%10*(pi/180)*sin((2*pi/(period*2))*t); %deck rotation about its y-axis [rad]
+angle2 = 10*(pi/180)*sin((2*pi/(period*2))*t); %deck rotation about its y-axis [rad]
 angle3 = 0*t; %deck rotation about its z-axis [rad]
 
 theta_D = [angle1;angle2;angle3];
@@ -51,13 +51,13 @@ r_B_ref = [0.5;0;1.2];
 %--------------
 % Gains
 %--------------
-n1 = 0;
-n2 = 0;
+n1 = 1;
+n2 = 1;
 % gains of inertial stability control
 Ka = 600*n1;
 Kv = 750*n2;
 
-n = 1;
+n = 0;
 % gains of relative position control
 Kp = 1.23*n;
 Ki = 2*n;
@@ -87,7 +87,7 @@ Gains =[Ka;Kv;Kp;Ki;Kd;Kp1;Ki1;Kd1;Kp2;Ki2;Kd2;Kp3;Ki3;Kd3];
 
 initial_conditions = [-0.097971-0.3 -1.9315-0.5 0 0 0 0 0 0 0 0 0 0]; %[q1 q2 q3 Dq1 Dq2 Dq3 e_rpX e_rpY e_rpZ e_j1 e_j2 e_j3]
 
-[sol.x, sol.y]= rk4_solver(@(t,x)EOM3D(t,x,Gains,References),time_interval,initial_conditions,1/freq);
+[sol.x, sol.y]= rk4_solver(@(t,x)EOM3D(t,x,platform,Gains,References),time_interval,initial_conditions,1/freq);
 sol.y = sol.y';
 
 % plot q3, q3_dot, q1, q1_dot, q2, q2_dot over time
@@ -146,7 +146,7 @@ ylabel("Inertial Z Acc. [m/s^{s}]")
 % torque values
 tau = zeros(3,length(sol.x));
 for i=1:length(sol.x)
-[~,tau(:,i)] = EOM3D(sol.x(i),sol.y(:,i),Gains,References);
+[~,tau(:,i)] = EOM3D(sol.x(i),sol.y(:,i),platform,Gains,References);
 end
 
 % plotting the torques of each joint
@@ -179,4 +179,4 @@ IsolationPercent = ((max_zEE-min_zEE)/0.5)*100;
 fprintf('Inertial Stability Isolation Percent = %3.2f%% \n',IsolationPercent)
 
 % animate
-animate3D(sol.x,sol.y,d, theta_D)
+animate3D(sol.x,sol.y,platform,d, theta_D)

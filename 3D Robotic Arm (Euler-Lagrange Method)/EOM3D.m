@@ -1,8 +1,8 @@
-function [X_dot,tau] = EOM3D(t,X,Gains,References)
+function [X_dot,tau] = EOM3D(t,X,platform,Gains,References)
 % SUMMARY
 
 % systems constants
-constants;
+% constants;
 
 r1 = platform.r1;
 r2 = platform.r2;
@@ -35,15 +35,15 @@ d_ddot = [dx_ddot;dy_ddot;dz_ddot];
 
 % deck rotations
 angle1 = 0; %[rad]
-angle2 = 0*t;%10*(pi/180)*sin((2*pi/(period*2))*t); %[rad]
+angle2 = 10*(pi/180)*sin((2*pi/(period*2))*t); %[rad]
 angle3 = 0; %[rad]
 
 angle1_dot = 0; %[rad/s]
-angle2_dot = 0*t;%10*(pi/180)*(2*pi/(period*2))*cos((2*pi/(period*2))*t); %[rad/s]
+angle2_dot = 10*(pi/180)*(2*pi/(period*2))*cos((2*pi/(period*2))*t); %[rad/s]
 angle3_dot = 0; %[rad/s]
 
 angle1_ddot = 0; %[rad/s^2]
-angle2_ddot = 0*t;%-10*(pi/180)*((2*pi/(period*2))^2)*sin((2*pi/(period*2))*t); %[rad/s^2]
+angle2_ddot = -10*(pi/180)*((2*pi/(period*2))^2)*sin((2*pi/(period*2))*t); %[rad/s^2]
 angle3_ddot = 0; %[rad/s^2]
 
 theta_D_dot = [angle1_dot;angle2_dot;angle3_dot];
