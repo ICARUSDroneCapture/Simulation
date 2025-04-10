@@ -12,6 +12,12 @@ dz = 0*t; %[m] (DO NOT CHANGE)
 d =[dx;dy;dz];
 d_dot = diff(d,'t');
 
+% the deck rotations
+period = 7.5*4; %s
+thetad = 90*(pi/180)*(sin((2*pi/(period))*t))^2; %deck rotation about its y-axis [rad]
+thetad_dot = diff(thetad, t);
+thetad_ddot = diff(thetad_dot, t);
+
 syms l1
 
 % forward kinematics

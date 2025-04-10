@@ -205,6 +205,11 @@ time_interval = [0 30]; %seconds
 
 initial_conditions = [q1_init Dq1_init]; %[q1 Dq1]
 
+MFun = @(t, y)EOM(t, y, platform);
+thetad = @(t) (pi*sin((pi*t)/15)^2)/2;
+thetad_dot = @(t) (pi^2*cos((pi*t)/15)*sin((pi*t)/15))/15;
+thetad_ddot = @(t) (pi^3*cos((pi*t)/15)^2)/225 - (pi^3*sin((pi*t)/15)^2)/225;
+
 [sol.x, sol.y]= rk4_solver(MFun,time_interval,initial_conditions,1/freq);
 sol.y = sol.y';
 
@@ -253,4 +258,5 @@ animate(sol.x,sol.y,d, angle2)
 %torque = torqueJoint(sol.x,sol.y,ref_q1,[Kp1,Ki1,Kd1]);
 
 %CARTESIAN-BASED TORQUES (Special)
-%torque = torqueCartesian(sol.x,sol.y,r_I,r_I_ref, p_ddot, angle2, [Ka,Kv,Kp,Ki,Kd]);
+%torque = torqueCartesian(sol.x,sol.y,r_I,r_I_ref, p_ddot, angle2,
+%[Ka,Kv,Kp,Ki,Kd]);S
