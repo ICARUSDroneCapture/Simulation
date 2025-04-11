@@ -7,43 +7,88 @@
 clear; clc; close all
 
 % calling constants
-constants;
+SimulationParameters;
 
-% controls
-%-------------------------------------------------------------------------%
-% JOINT-BASED & CARTESIAN-BASED CONTROL
-% reference angle
-ref_q1 = -pi/4;
+% solving the system
+dt = 0.0001; %[d]
+time_interval = [0 30]; %seconds
 
-% reference relative position (inertial)
-r_I_ref = [0.5;0;0.2];
+a.thetad = @(t) (pi*sin((pi*t)/15)^2)/2;
+a.thetad_dot = @(t) (pi^2*cos((pi*t)/15)*sin((pi*t)/15))/15;
+a.thetad_ddot = @(t) (pi^3*cos((pi*t)/15)^2)/225 - (pi^3*sin((pi*t)/15)^2)/225;
 
-% forward kinematics
-r_I = [platform.l1*cos(q1(t)+theta2(t));0;-platform.l1*sin(q1(t)+theta2(t))];
+initial_conditions = [-0.1; 0; 0; 
+                       0; 0; 0]; %[q1; Dq1; int_q1_err; 
+                                  % pm_ddot];
 
-% the jocabain
-J = [-platform.l1*sin(q1(t)+theta2(t));
-     0;
-     -platform.l1*cos(q1(t)+theta2(t))];
+MFun = @(t, y)EOM_V3(t, y, a);
+% tic
+% for i = 1:20
+[sol.x, sol.y]= rk4_solver(MFun,time_interval,initial_conditions,dt);
+% end
+% toc
+% sol.y = sol.y';
 
-% inertial acceleration
-p = d+r_I;
-p_ddot = diff(p,'t',2);
+%% Plotting and analysis
 
-% gains of inertial stability control (cartesian)
-Ka = 300*1;
-Kv = 375*1;
+m = 10;
+x = sol.x(1:m:end);
+y = sol.y(1:m:end,:)';
 
-% gains of relative position control (cartesian)
-Kp = 15*0;
-Ki = 2*0;
-Kd = 10*0;
+% plot q1,q1_dot,q2, q2_dot over time
+q1_ref = -pi/4;
+plot1(x,y,q1_ref)
 
-% gains of motor 1 (joint)
-Kp1 = 4*0;
-Ki1 = 10*0;
-Kd1 = 15*0;
+syms t
 
-F_control = Kp*(r_I_ref-r_I)+Ki*int(r_I_ref-r_I)+Kd*diff(r_I_ref-r_I)-Ka*p_ddot+Kv*int(-p_ddot);
+% the base movement in the inertial frame 
+dx = 0*t; %[m] (DO NOT CHANGE)
+dy = 0*t; %[m] (DO NOT CHANGE)
+dz = 0*t; %[m] (DO NOT CHANGE)
 
-tau = J.'*F_control ;
+d =[dx;dy;dz];
+
+% the deck rotations
+period = 7.5*4; %[s]
+angle2 = 90*(pi/180)*(sin((2*pi/(period))*t))^2; %deck rotation about its y-axis [rad]
+
+% plot the inertial position of the deck and the platform
+d_fun = matlabFunction(d, "Vars",{t});
+B = d_fun(x);
+
+theta2_fun = matlabFunction(angle2);
+theta2_eval = theta2_fun(x);
+
+xEE = B(1) + a.l1*cos(y(1,:)+theta2_eval);
+zEE = B(3) - a.l1*sin(y(1,:)+theta2_eval);
+
+% figure()
+% plot(0,0,'rx',"LineWidth",2)
+% hold on
+% plot(xEE,zEE,'b-')
+% xlabel("X-axis [m]")
+% ylabel("Z-axis [m]")
+% axis([-a.l1-0.1 a.l1+0.1 -a.l1-0.1 a.l1+0.1]);
+% title("The System in The Inertial Frame")
+% legend("Hinge Axis","End Effector")
+% hold off
+
+figure;
+plot(x, zEE)
+xlabel('Time (s)')
+ylabel('Vertical Position (m)')
+title('Inertial Position vs Time')
+
+% calculating the performance of the inertial stability control
+% lets find the index of x where the time is greater than 10 seconds
+% timeIndex = find(x >= 10);
+% max_zEE = max(zEE(timeIndex));
+% min_zEE = min(zEE(timeIndex));
+% 
+% 
+% IsolationPercent = ((max_zEE-min_zEE)/a.l1)*100;
+% 
+% fprintf('Inertial Stability Isolation Percent = %3.2f%% \n',IsolationPercent)
+% 
+% % animate
+% animate(x,y, d, angle2, a)
