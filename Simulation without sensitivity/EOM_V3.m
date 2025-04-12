@@ -16,24 +16,25 @@ p_dot = [-a.l1*sin(q1 + a.thetad(t))*(q1_dot + a.thetad_dot(t));
 
 q1_ref = -pi/4;
 
+C = a.C(pr);
+ka = a.ka*C; % Acceleration [kg]
+
+% Proportion of relative position control
+B = a.B(pr);
+kp = a.kp_c*C + a.kp_b*B; % Proportional 
+kd = a.kd_c*C + a.kd_b*B; % Derivative   
+ki = a.ki_c*C + a.ki_b*B; % Integral     
+
 % gains of inertial stability control (cartesian)
 Ka = [0 0 0;
       0 0 0;
-      0 0 300*1];
-Kv = [0 0 0;
-      0 0 0;
-      0 0 375*1];
-
-% gains of motor 1 (joint)
-Kp1 = 4*0;
-Ki1 = 10*0;
-Kd1 = 15*0;
+      0 0 ka]*0;
 
 R_I_B = [cos(a.thetad(t)) 0 -sin(a.thetad(t));
         0 1 0;
         sin(a.thetad(t)) 0 cos(a.thetad(t))];
 
-F_I = -R_I_B*(Ka*pm_ddot + Kv*p_dot);
+F_I = -R_I_B*Ka*pm_ddot;
 
 % the jocabain
 J = [-a.l1*sin(q1); 0;- a.l1*cos(q1)];
@@ -41,7 +42,7 @@ J = [-a.l1*sin(q1); 0;- a.l1*cos(q1)];
 tau_I = J.'*F_I;
 
 q1_err = q1 - q1_ref;
-tau_r = -(Kp1*q1_err + Ki1*(q1_err_accum) + Kd1*(q1_dot));
+tau_r = -(kp*q1_err + ki*q1_err_accum + kd*q1_dot);
 
 tau = tau_I + tau_r;
 

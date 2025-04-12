@@ -34,7 +34,7 @@ SimulationParameters;
 
 load('simResults.mat')
 
-m = 10;
+m = 50;
 x = sol.x(1:m:end);
 y = sol.y(1:m:end,:)';
 

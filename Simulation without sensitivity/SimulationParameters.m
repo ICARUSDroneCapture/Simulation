@@ -7,9 +7,9 @@
 % =================== %
 a.g = 9.81; %[m/s^2]
 
-% a.m1 = 0.39; %[kg]
+% a.m1 = 3.08; %[kg]
 % 
-% a.l1 = 0.639; %[m]
+% a.l1 = 0.6; %[m]
 
 a.m1 = 3.3015; %[kg]
 a.l1 = 0.905; %[m]
@@ -18,13 +18,13 @@ Ixx1 = 0; %[kg.m^2]
 Ixy1 = 0.0000905; %[kg.m^2]
 Ixz1 = 0; %[kg.m^2]
 Iyx1 = Ixy1; %[kg.m^2]
-% Iyy1 = (1/12)*a.m1*(a.l1)^2; %[kg.m^2]
-Iyy1 = 0.2925; %[kg.m^2]
+Iyy1 = (1/12)*a.m1*(a.l1)^2; %[kg.m^2]
+% Iyy1 = 0.2925; %[kg.m^2]
 Iyz1 = 0; %[kg.m^2]
 Izx1 = Ixz1; %[kg.m^2]
 Izy1 = Iyz1; %[kg.m^2]
-% Izz1 = (1/12)*a.m1*(a.l1)^2; %[kg.m^2]
-Izz1 = 0.2925; %[kg.m^2]
+Izz1 = (1/12)*a.m1*(a.l1)^2; %[kg.m^2]
+% Izz1 = 0.2925; %[kg.m^2]
 
 a.r1 = a.l1/2; %[m]
 
@@ -62,3 +62,18 @@ a.N = N1*eta1; %gearhead ratio/efficiency matrix
 a.thetad = @(t) (pi*sin((pi*t)/15).^2)/2;
 a.thetad_dot = @(t) (pi^2*cos((pi*t)/15).*sin((pi*t)/15))/15;
 a.thetad_ddot = @(t) (pi^3*cos((pi*t)/15).^2)/225 - (pi^3*sin((pi*t)/15).^2)/225;
+
+% Inertial Stabilization Control
+a.ka = 0;  % Acceleration Control [kg]
+a.kv = 0;  % Velocity Control [kg/s]
+a.ks = 0;  % Position Control [kg*s^-2] 
+
+% Relative Position Control at center
+a.kp_c = 0;  % Proportional [kg*s^-2]
+a.kd_c = 0;  % Derivative [kg/s]    
+a.ki_c = 0;  % Integral [kg*s^-3] 
+
+% Relative Position Control at boundaries
+a.kp_b = 0;  % Proportional [kg*s^-2]
+a.kd_b = 0;  % Derivative [kg/s]    
+a.ki_b = 0;  % Integral [kg*s^-3] 
