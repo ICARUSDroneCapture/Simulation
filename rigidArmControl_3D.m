@@ -91,9 +91,9 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     % accel_S = a_S;
 
     % Get REAL angular velocity
-    theta_d = a.theta_dot_eq(t);
-    phi_d = a.phi_dot_eq(t);
-    psi_d = a.psi_dot_eq(t);
+    theta_d = a.theta_dot(t);
+    phi_d = a.phi_dot(t);
+    psi_d = a.psi_dot(t);
 
     angle_d = [theta_d; phi_d; psi_d];
 

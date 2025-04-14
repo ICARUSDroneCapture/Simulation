@@ -6,38 +6,7 @@ rng(1,"twister");
 
 set(groot,'DefaultLineLineWidth',1)
 
-simulationParameters;
-
-% Sensor Drift Control
-% a.kw = 1200;   % correlated to beta_min
-% a.kt = 0.6;    % correlated to beta_max
-a.kw = a.beta_max - 0.2;
-a.kt = a.beta_min;
-
-close all;
-
-% Redefining acceleration/gyro curves for clarity
-
-a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
-a.real_vel = @(t) beta*alpha*cos(beta*t);
-a.real_accel = @(t, y) -beta^2*alpha*sin(beta*t); % [m*s^-2]
-a.real_ang = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
-a.real_ang_rate = @(t, y) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
-
-%% Sensor Model Aspects
-
-% Simulation time
-startTime = 0;
-finishTime = 60;
-tspan = [startTime finishTime]; % [s]
-
-% dt = 1/imu_rate;  % [s]
-dt = 0.0001;
-t = (tspan(1):dt:tspan(2))';
-t_count = length(t);
-indeces = @(t) floor(t/dt)+1;
-
-defineSignals
+simulationParameters
 
 %% Get Error Signal
 
@@ -45,57 +14,38 @@ fprintf('\nIntegrating Angular Rate (no Sensor Error)')
 fprintf("\nTime: ")
 
 % Initial Angle
-p_theta0 = a.real_ang(tspan(1)); % Platform inertial angle [deg]
-
-[t, theta_base]= rk4_solver(a.real_ang_rate, tspan, p_theta0, dt);
-
-% Integration Verification Plot
-figure
-plot(t, 180/pi*theta_base)
-hold on
-plot(t, 180/pi*a.real_ang(t))
-xlabel('Time (sec)')
-ylabel('Angle (deg)')
-legend('Integrated Angle', 'Angle Equation')
-title('Basic Integrated Angle Plot')
-
-fprintf('\nFinished Integration with NO Sensor Error.\n')
-fprintf('\nStarting Integration WITH Sensor Error.')
-fprintf("\nTime: ")
+phi_base = a.phi(t);
+p_phi0 = phi_base(1); % Platform inertial angle [deg]
 
 % Running simulation with sensor error
 
-gyro_error_signal = zeros(length(t), 1);
-
-for i = 1:length(t)
-    time_i = t(i);
-    ang_rate_i = a.real_ang_rate(time_i);
-    gyro_error_signal(i) = a.measured_gyro(time_i, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, ang_rate_i);
-end
+phi_over_time = a.phi(t);
+phi_dot_over_time = a.phi_dot(t);
+gyro_with_error_signal = a.measured_gyro_3D(a, t, phi_dot_over_time);
 
 % Basic gyro signal (real angular rate with error)
 figure
-plot(t, a.real_ang_rate(t))
+plot(t, phi_dot_over_time)
 hold on
-plot(t, gyro_error_signal)
+plot(t, gyro_with_error_signal)
 % hold on
 xlabel('Time (sec)')
 ylabel('Angular Rate (rad/s)')
 legend('Real Value', 'Gyro Measured Signal')
 title('Angular Rate Real vs Measured')
 
-control_dynamics = @(t_i, state) a.measured_gyro(t_i, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, a.real_ang_rate(t_i));
+control_dynamics = @(t_i, state) a.measured_gyro_3D(a, t_i, a.phi_dot(t_i));
 
-[t_error, theta_error]= rk4_solver(control_dynamics, tspan, p_theta0, dt);
+[~, phi_error]= rk4_solver(control_dynamics, tspan, p_phi0, dt);
 
 fprintf('\nFinished Integration WITH Sensor Error.\n')
 
 %% Plotting Platform Angle
 
 figure
-plot(t, 180/pi*theta_base)
+plot(t, 180/pi*phi_base)
 hold on
-plot(t_error, 180/pi*theta_error)
+plot(t, 180/pi*phi_error)
 xlabel('Time (sec)')
 ylabel('Angle (deg)')
 legend('NO Sensor Error', 'WITH Sensor Error')
@@ -104,13 +54,13 @@ ylim([-30 30])
 
 %% Getting and Plotting Angle Error
 
-pos_err = theta_error(:, 1) - theta_base(:, 1);
+ang_err = phi_error(:, 1) - phi_base(:, 1);
 
 sz = 2;
 plot_scale = 10;
 
 figure
-scatter(t_error, pos_err*180/pi, sz, 'filled', displayName="Angle Error")
+scatter(t, ang_err*180/pi, sz, 'filled', displayName="Angle Error")
 title('Integrated Angle Error vs Time')
 xlabel('Time (s)')
 ylabel('Error (deg)')
@@ -122,31 +72,31 @@ fprintf("\nTime: ")
 
 control_dynamics = @(t_i, state) GyroDriftCorrection(t_i, a, state);
 
-theta_0 = 0;
-theta_dot_0 = 0;
+angle_0 = 0;
+angle_dot_0 = 0;
 
-s0 = [theta_0 theta_dot_0];
+s0 = [angle_0 angle_0 angle_0 angle_dot_0 angle_dot_0 angle_dot_0];
 
-[t_corr, theta_corr]= rk4_solver(control_dynamics, tspan, s0, dt);
+[~, angle_corr]= rk4_solver(control_dynamics, tspan, s0, dt);
 
 fprintf('\nFinished Integration WITH Sensor Compensation Control Law.\n')
 
-theta_der = diff(theta_corr) / dt;
+angle_der = diff(angle_corr(:, 2)) / dt;
 figure
-plot(t(2:end), theta_der(:, 1))
+plot(t(2:end), angle_der)
 hold on
-plot(t, a.real_ang_rate(t))
+plot(t, a.phi_dot(t))
 xlabel('Time (sec)')
 ylabel('Angular Rate (rad/s)')
 title('Gyroscope Angular Velocity')
 legend('Controlled Signal', 'Real Deck Motion')
 
 figure
-plot(t, 180/pi*theta_base)
+plot(t, 180/pi*phi_base)
 hold on
-plot(t_error, 180/pi*theta_error)
+plot(t, 180/pi*phi_error)
 hold on
-plot(t_corr, 180/pi*theta_corr(:, 1))
+plot(t, 180/pi*angle_corr(:, 2))
 xlabel('Time (sec)')
 ylabel('Angle (deg)')
 legend('NO Sensor Error', 'WITH Sensor Error', 'Corrected Sensor Error')
@@ -154,37 +104,81 @@ title('Basic Integrated Angle Plot')
 ylim([-30 30])
 
 
+theta_dot_m_controlled_x = diff(angle_corr(:, 1))/dt;
+phi_dot_m_controlled_y = diff(angle_corr(:, 2))/dt;
+psi_dot_m_controlled_z = diff(angle_corr(:, 3))/dt;
+
+figure
+subplot(3,1,1)
+plot(t(2:end), theta_dot_m_controlled_x/pi*180)
+hold on
+plot(t, a.theta_dot(t)/pi*180)
+xlabel('Time (sec)')
+ylabel('Angular Velocity (deg/s)')
+legend('NO Sensor Error', 'Controlled Error Integrated')
+title('Controlled Measured Angular Velocity Theta')
+% ylim([-5 5])
+
+subplot(3,1,2)
+plot(t(2:end), phi_dot_m_controlled_y/pi*180)
+hold on
+plot(t, a.phi_dot(t)/pi*180)
+xlabel('Time (sec)')
+ylabel('Angular Velocity (deg/s)')
+legend('NO Sensor Error', 'Controlled Error Integrated')
+title('Controlled Measured Angular Velocity Phi')
+% ylim([-5 5])
+
+subplot(3,1,3)
+plot(t(2:end), psi_dot_m_controlled_z/pi*180)
+hold on
+plot(t, a.psi_dot(t)/pi*180)
+xlabel('Time (sec)')
+ylabel('Angular Velocity (deg/s)')
+legend('NO Sensor Error', 'Controlled Error Integrated')
+title('Controlled Measured Angular Velocity Psi')
+% ylim([-5 5])
+
+
 function s_dot = GyroDriftCorrection(time_i, a, prev_state)
 
     % Current states
     theta = prev_state(1);
-    theta_err_accum = prev_state(2);
+    phi = prev_state(2);
+    psi = prev_state(3);
+    theta_err_accum = prev_state(4);
+    phi_err_accum = prev_state(5);
+    psi_err_accum = prev_state(6);
 
     specs = a.specs;
 
-    kw = a.kw;
-    kt = a.kt;
+    angle = [theta; phi; psi];
+    angle_err_accum = [theta_err_accum; phi_err_accum; psi_err_accum];
 
-    theta_0 = 0;
-    theta_dot_0 = 0;
+    kw = a.kw(4:6);
+    kt = a.kt(4:6);
 
-    ang_rate_i = a.real_ang_rate(time_i);
-    measured_g = a.measured_gyro(time_i, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, ang_rate_i);
+    angle_0 = 0;
+    angle_dot_0 = 0;
+
+    % For this script, we are focusing on the only non-zero angle, phi
+    ang_rate_i = [a.theta_dot(time_i); a.phi_dot(time_i); a.psi_dot(time_i)];
+    measured_g = a.measured_gyro_3D(a, time_i, ang_rate_i);
    
-    measuredState = [0 0 0 measured_g measured_g measured_g];
+    measuredState = [0 0 0 measured_g'];
     corrected_state = compensateError(measuredState, specs, time_i);
 
-    theta_dot_m = corrected_state(4);
+    angle_dot_m = [corrected_state(4); corrected_state(5); corrected_state(6)];
 
-    theta_control = theta - theta_0;
+    angle_control = angle - angle_0;
 
-    theta_dot_comp = kt * theta_err_accum + kw * theta_control;
+    angle_dot_comp = kt .* angle_err_accum + kw .* angle_control;
 
-    theta_dot = theta_dot_m + theta_dot_0 - theta_dot_comp;
+    angle_dot = angle_dot_m + angle_dot_0 - angle_dot_comp;
 
-    s_dot = zeros(2,1);
+    s_dot = zeros(6,1);
 
-    s_dot(1) = theta_dot;
-    s_dot(2) = theta_control;
+    s_dot(1:3) = angle_dot;
+    s_dot(4:6) = angle_control;
 
 end

@@ -8,58 +8,14 @@ a.pr_d = 0.5; % Desired relative position [m]
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Environmental Model %%%%%%%%%%%%%%%%%%%%
 
-alpha = 0.2; % wave amplitdue [m]
-hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
 
-% Wave frequency
-t_min = 2.5;     % Minimum period [s]
-t_max = 9;    % Maximum period [s]
+define_sim_environment
 
-Tmax = 7.5;    % Expected period [s]
-k = 1;
-T = Tmax / k;  % Period of deck disturbance [s]
-beta = 2*pi/T; % wave frequency [rad/s]
-a.beta_min = 1/t_max; % Minimum frequency [Hz]
-a.beta_max = 1/t_min; % Maximum frequency [Hz]
-
-% Inertial Position, Velocity, and Acceleration of Deck
-
-% Sine Wave
-a.d = @(t) alpha*sin(beta*t) + hdeck;      % [m]
-a.d_dot = @(t) beta*alpha*cos(beta*t);    % [m/s]
-a.d_ddot = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
- 
-% Cosine Wave
-% a.d = @(t) alpha*cos(beta*t) + hdeck;      % [m]
-% a.d_dot = @(t) -beta*alpha*sin(beta*t);    % [m/s]
-% a.d_ddot = @(t) -beta^2*alpha*cos(beta*t); % [m*s^-2]
-
-% Square Wave
-% N = 3; % Number of terms in the Fourier series
-% coefficients = 1:2:(2*N - 1); % Odd harmonics: 1, 3, 5, ..., (2*N-1)
-% beta2 = 2*pi/15;
-% a.sw = @(t) alpha*((4/pi) * ...
-%     sum(arrayfun(@(n) sin(n*beta2*t)/n, coefficients))) + hdeck; % [m]
-% a.d = @(t) arrayfun(a.sw, t);
-% a.sw_dot = @(t) alpha*((4/pi) * ...
-%     sum(arrayfun(@(n) beta2*cos(n*beta2*t), coefficients)));    % [m/s]
-% a.d_dot = @(t) arrayfun(a.sw_dot, t);
-% a.sw_ddot = @(t) alpha*((4/pi) * ...
-%     sum(arrayfun(@(n) -n*beta2^2*sin(n*beta2*t), coefficients))); % [m*s^-2]
-% a.d_ddot = @(t) arrayfun(a.sw_ddot, t);
-
-% Stacked sine wave
-% a.d = @(t) alpha*(1.5*sin(beta*t/6) + 0.75*sin(beta*t)) + hdeck; % [m]
-% a.d_dot = @(t) alpha*(0.25*beta*cos(beta*t/6) ...
-%                                     + 0.75*beta*cos(beta*t)); % [m/s]
-% a.d_ddot = @(t) -alpha*(0.0417*beta^2*sin(beta*t/6) ...
-%                                     + 0.75*beta^2*sin(beta*t)); % [m*s^-2]
-
-a.theta = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
-a.theta_dot = @(t) -(alpha*beta^2*sin(beta*t))/(alpha^2*beta^2*(cos(beta*t)^2)+1); % [rad]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%% Control Gains %%%%%%%%%%%%%%%%%%%%%%%
+
+plot_gain = false;
 
 % Minimum Required Control Constants:
 %   a.ka = 2800; a.kv = ?; a.ks = ?;
@@ -135,20 +91,23 @@ a.K_h = @(x) ...
 
 pr = linspace(0,1,1000); % relative position test values
 
-figure;
-plot(pr,a.I(pr)) % Proportion of inertial control gain
-hold on
-plot(pr, a.K(pr)) % Proportion of relative position control gain
-plot(pr, a.K_h(pr)) % Proportion of non-zero relative position control gain
-xline(a.pr_d,'--','Label','$p_{rd}$','Interpreter','latex','FontSize',15,...
-    'LabelOrientation','horizontal','LabelVerticalAlignment','middle')
-title('Inertial and Relative Positional Control Mixing')
-xlabel('Relative Position (m)')
-ylabel('Gain Proportion')
-xlim([-0.1 1.1])
-ylim([-0.1 1.1])
-legend('Inertial','Relative','Non-zero Relative')
-grid on
+
+if plot_gain
+    figure;
+    plot(pr,a.I(pr)) % Proportion of inertial control gain
+    hold on
+    plot(pr, a.K(pr)) % Proportion of relative position control gain
+    plot(pr, a.K_h(pr)) % Proportion of non-zero relative position control gain
+    xline(a.pr_d,'--','Label','$p_{rd}$','Interpreter','latex','FontSize',15,...
+        'LabelOrientation','horizontal','LabelVerticalAlignment','middle')
+    title('Inertial and Relative Positional Control Mixing')
+    xlabel('Relative Position (m)')
+    ylabel('Gain Proportion')
+    xlim([-0.1 1.1])
+    ylim([-0.1 1.1])
+    legend('Inertial','Relative','Non-zero Relative')
+    grid on
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%% Performance Parameters %%%%%%%%%%%%%%%%%%%

@@ -6,154 +6,42 @@ rng(1,"twister");
 
 set(groot,'DefaultLineLineWidth',1)
 
-simulationParameters;
-
-close all;
-
-% Redefining acceleration/gyro curves for clarity
-
-%% Sensor Model Aspects
-
-% Simulation time
-startTime = 0;
-finishTime = 30;
-tspan = [startTime finishTime]; % [s]
-
-% dt = 1/imu_rate;  % [s]
-dt = 0.0001;
-t = (tspan(1):dt:tspan(2))';
-t_count = length(t);
-indeces = @(t) floor(t/dt)+1;
-
-defineSignals
-% defineSignalsNoNoise
-
-scale_w = 1;
-scale_t = 1;
-
-% a.kw = scale_w*a.beta_min; % 
-% a.kt = scale_t*a.beta_max; % 
-
-T_x = 2*pi/(beta/2); % wave frequency [rad/s] (15 sec)
-T_y = 2*pi/(beta/4); % wave frequency [rad/s] (30 sec)
-T_z = 2*pi/(beta); % wave frequency [rad/s] (7.5 sec)
-
-t_min_x = 13;
-t_max_x = 18;
-
-t_min_y = 29;
-t_max_y = 33;
-
-t_min_z = 8;
-t_max_z = 9;
-
-a.beta_min_x = 1/t_min_x;
-a.beta_min_y = 1/t_min_y;
-a.beta_min_z = 1/t_min_z;
-
-a.beta_max_x = 1/t_max_x;
-a.beta_max_y = 1/t_max_y;
-a.beta_max_z = 1/t_max_z;
-
-a.kw = [scale_t*a.beta_max_x; scale_t*a.beta_max_y; scale_t*a.beta_max_z; scale_t*a.beta_max_x; scale_t*a.beta_max_y; scale_t*a.beta_max_z];
-a.kt = [scale_w*a.beta_min_x; scale_w*a.beta_min_y; scale_w*a.beta_min_z; scale_w*a.beta_min_x; scale_w*a.beta_min_y; scale_w*a.beta_min_z];
-
-%% 3D motion equations
-
-a.real_pos_xI = @(t) 0.4/(beta^2)*sin(beta*t/2);
-a.real_pos_yI = @(t) 1.6/(beta^2)*sin(beta*t/4);
-a.real_pos_zI = @(t) alpha*sin(beta*t) + hdeck;
-
-a.real_vel_xI = @(t) 0.2/beta*cos(beta/2*t);
-a.real_vel_yI = @(t) 0.4/beta*cos(beta/4*t);
-a.real_vel_zI = @(t) beta*alpha*cos(beta*t);
-
-a.real_accel_xI = @(t) -0.1*sin(beta/2*t); % [m*s^-2]
-a.real_accel_yI = @(t) -0.1*sin(beta/4*t); % [m*s^-2]
-a.real_accel_zI = @(t) -beta^2*alpha*sin(beta*t) - 9.81; % [m*s^-2]
-
-a.theta = @(t) -atan(beta*alpha*cos(beta*t)); % [rad]
-a.phi = @(t) atan(0.2/beta*cos(beta/2*t)); % [rad]
-a.psi = @(t) atan(0.4/beta*cos(beta/4*t)); % [rad]
-
-% a.theta = @(t) atan(0.4/beta*cos(beta/4*t)); % [rad]
-% a.phi = @(t) -atan(beta*alpha*cos(beta*t)); % [rad]
-% a.psi = @(t) atan(0.2/beta*cos(beta/2*t)); % [rad]
-
-% a.theta_dot = @(t) ((alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
-% a.phi_dot = @(t) ((-0.1*sin(beta/2*t))/(((0.04*(cos(beta*t/2).^2))/(beta^2))+1)); % [rad/s]
-% a.psi_dot = @(t) ((-0.1*sin(beta/4*t))/(((0.16*(cos(beta*t/4).^2))/(beta^2))+1)); % [rad/s]
-
-% Angular rate needs to be taken manually since the derivative equation is +/-
-theta_vals = a.theta(t);
-phi_vals = a.phi(t);
-psi_vals = a.psi(t);
-
-theta_dot = zeros(1, length(t));
-phi_dot = zeros(1, length(t));
-psi_dot = zeros(1, length(t));
-
-theta_dot(2:end) = diff(theta_vals)/dt;
-phi_dot(2:end) = diff(phi_vals)/dt;
-psi_dot(2:end) = diff(psi_vals)/dt;
-
-a.theta_dot_eq = @(t) theta_dot(floor(t./dt)+1);
-a.phi_dot_eq = @(t) phi_dot(floor(t./dt)+1);
-a.psi_dot_eq = @(t) psi_dot(floor(t./dt)+1);
-
-s = @(x) sin(x);
-c = @(x) cos(x);
-
-%% Simplifying to just z-direction equations for now
-a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
-a.real_vel = @(t) beta*alpha*cos(beta*t);
-a.real_accel = @(t, y) -beta^2*alpha*sin(beta*t) - 9.81; % [m*s^-2]
-a.real_ang = @(t) atan(0.4/beta*cos(beta/4*t)); % [rad]
-a.real_ang_rate = @(t, y) theta_dot(floor(t./dt)+1);
+simulationParameters
 
 %% Sensor Frame Accelerations
 
-a_S_true = zeros(3, length(t));
+a_I_over_time = [a.real_accel_xI(t), a.real_accel_yI(t), a.real_accel_zI(t)];
+
+theta_over_time = a.theta(t);
+phi_over_time = a.phi(t);
+psi_over_time = a.psi(t);
+
+a_S_true = zeros(length(t), 3);
+a_S_measured = zeros(length(t), 3);
+a_I_ref = zeros(length(t), 3);
 
 for i = 1:length(t)
 
     t_i = t(i);
 
-    theta = a.theta(t_i);
-    phi = a.phi(t_i);
-    psi = a.psi(t_i);
+    theta_i = theta_over_time(i);
+    phi_i = phi_over_time(i);
+    psi_i = psi_over_time(i);
 
-    a_I = [a.real_accel_xI(t_i); a.real_accel_yI(t_i); a.real_accel_zI(t_i)];
+    a_I_i = a_I_over_time(i, :)';
+    
+    % Convert inertial frame accelerations to sensor frame
+    a_S_i = Rotate_I_S(a_I_i, theta_i, phi_i, psi_i);
+    
+    % Get measured sensor frame accelerations
+    a_S_m = a.measured_accel_3D(a, t_i, a_S_i);
+    
+    % Convert Measured Accelerations back to Inertial without any Correction
+    a_I_i = Rotate_S_I(a_S_m, theta_i, phi_i, psi_i);
 
-    a_S = Rotate_I_S(a_I, theta, phi, psi);
-
-    a_S_true(:, i) = a_S;
-
-end
-
-%% Get Sensor Frame Measurements
-
-% Sensor frame values determined using REAL angle, with sensor error added
-
-a_S_measured = zeros(3, length(t));
-
-for i = 1:length(t)
-
-    t_i = t(i);
-
-    theta = a.theta(t_i);
-    phi = a.phi(t_i);
-    psi = a.psi(t_i);
-
-    a_I = [a.real_accel_xI(t_i); a.real_accel_yI(t_i); a.real_accel_zI(t_i)];
-
-    a_S = Rotate_I_S(a_I, theta, phi, psi);
-
-    a_Sx_m = a.measured_accel(t_i, a.o_d_n_a_c, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift, a.noiseDistAccel, a_S(1));
-    a_Sy_m = a.measured_accel(t_i, a.o_d_n_a_c, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift, a.noiseDistAccel, a_S(2));
-    a_Sz_m = a.measured_accel(t_i, a.o_d_n_a_c, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift, a.noiseDistAccel, a_S(3));
-   
-    a_S_measured(:, i) = [a_Sx_m; a_Sy_m; a_Sz_m];
+    a_S_true(i, :) = a_S_i';
+    a_S_measured(i, :) = a_S_m';
+    a_I_ref(i, :) = a_I_i';
 
 end
 
@@ -161,7 +49,7 @@ figure
 subplot(3,1,1)
 plot(t, a.real_accel_xI(t))
 hold on
-plot(t, a_S_measured(1, :))
+plot(t, a_S_measured(:, 1))
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 title('Measured Sensor Acceleration X (m/s^2)')
@@ -170,7 +58,7 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 subplot(3,1,2)
 plot(t, a.real_accel_yI(t))
 hold on
-plot(t, a_S_measured(2, :))
+plot(t, a_S_measured(:, 2))
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 title('Measured Sensor Acceleration Y (m/s^2)')
@@ -179,37 +67,18 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 subplot(3,1,3)
 plot(t, a.real_accel_zI(t))
 hold on
-plot(t, a_S_measured(3, :))
+plot(t, a_S_measured(:, 3))
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 title('Measured Sensor Acceleration Z (m/s^2)')
 legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 
-%% Convert Error Signal Back to Inertial Without Offset Correction
-
-a_I_ref = zeros(3, length(t));
-
-for i = 1:length(t)
-
-    t_i = t(i);
-
-    a_S = a_S_measured(:, i);
-
-    theta = a.theta(t_i);
-    phi = a.phi(t_i);
-    psi = a.psi(t_i);
-
-    a_I = Rotate_S_I(a_S, theta, phi, psi);
-
-    a_I_ref(:, i) = a_I;
-
-end
 
 figure
 subplot(3,1,1)
 plot(t, a.real_accel_xI(t))
 hold on
-plot(t, a_I_ref(1, :))
+plot(t, a_I_ref(:, 1))
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 title('Inertial Acceleration X Converted From Sensor (m/s^2)')
@@ -218,7 +87,7 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 subplot(3,1,2)
 plot(t, a.real_accel_yI(t))
 hold on
-plot(t, a_I_ref(2, :))
+plot(t, a_I_ref(:, 3))
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 title('Inertial Acceleration Y Converted From Sensor (m/s^2)')
@@ -227,7 +96,7 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 subplot(3,1,3)
 plot(t, a.real_accel_zI(t))
 hold on
-plot(t, a_I_ref(3, :))
+plot(t, a_I_ref(:, 3))
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 title('Inertial Acceleration Z Converted From Sensor (m/s^2)')
@@ -390,10 +259,12 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 
 %% Control Law Drift Compensation
 
+finishCalibrationTime = 60; % seconds
+
 fprintf('\nStarting Integration WITH Sensor Compensation Control Law.')
 fprintf("\nTime: ")
 
-control_dynamics = @(t_i, state) IMUDriftCorrection(t_i, a, state);
+control_dynamics = @(t_i, state) IMUDriftCorrection(t_i, a, state, finishCalibrationTime);
 
 vel0_x = 0;
 vel0_y = 0;
@@ -426,7 +297,7 @@ xlabel('Time (sec)')
 ylabel('Angle (deg)')
 legend('NO Sensor Error', 'Controlled Error')
 title('Controlled Integrated Angle')
-% ylim([-5 5])
+ylim([-0.3 0.3])
 
 subplot(3,1,2)
 plot(t, a.phi(t))
@@ -436,7 +307,7 @@ xlabel('Time (sec)')
 ylabel('Angle (deg)')
 legend('NO Sensor Error', 'Controlled Error')
 title('Controlled Integrated Angle')
-% ylim([-5 5])
+ylim([-0.3 0.3])
 
 subplot(3,1,3)
 plot(t, a.psi(t))
@@ -446,7 +317,7 @@ xlabel('Time (sec)')
 ylabel('Angle (deg)')
 legend('NO Sensor Error', 'Controlled Error')
 title('Controlled Integrated Angle')
-% ylim([-5 5])
+ylim([-0.3 0.3])
 
 
 figure
@@ -492,43 +363,95 @@ subplot(3,1,1)
 plot(t, a.real_accel_xI(t))
 hold on
 plot(t(2:end), accel_m_controlled_x)
+hold on
+xline(finishCalibrationTime, 'b--')
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 legend('NO Sensor Error', 'Controlled Error Integrated')
 title('Controlled Measured Acceleration X')
-% ylim([-5 5])
+% ylim([-0.4 0.4])
 
 subplot(3,1,2)
 plot(t, a.real_accel_yI(t))
 hold on
 plot(t(2:end), accel_m_controlled_y)
+hold on
+xline(finishCalibrationTime, 'b--')
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 legend('NO Sensor Error', 'Controlled Error Integrated')
 title('Controlled Measured Acceleration Y')
-% ylim([-5 5])
+% ylim([-0.4 0.4])
 
 subplot(3,1,3)
-plot(t, a.real_accel_zI(t) + 9.81)
+plot(t, a.real_accel_zI(t) + a.g)
 hold on
 plot(t(2:end), accel_m_controlled_z)
+hold on
+xline(finishCalibrationTime, 'b--')
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 legend('NO Sensor Error', 'Controlled Error Integrated')
 title('Controlled Measured Acceleration Z')
+% ylim([-0.4 0.4]) 
+
+%% Plotting Angular Velocity
+
+
+gyro_m_controlled_theta = diff(int_state_corr(:, 4))/dt;
+gyro_m_controlled_phi = diff(int_state_corr(:, 5))/dt;
+gyro_m_controlled_psi = diff(int_state_corr(:, 6))/dt;
+
+figure
+subplot(3,1,1)
+plot(t, a.theta_dot(t))
+hold on
+plot(t(2:end), gyro_m_controlled_theta)
+hold on
+xline(finishCalibrationTime, 'b--')
+xlabel('Time (sec)')
+ylabel('Angular Velocity (rad/s)')
+legend('NO Sensor Error', 'Controlled Error Integrated')
+title('Controlled Measured Angular Velocity Theta')
+% ylim([-5 5])
+
+subplot(3,1,2)
+plot(t, a.phi_dot(t))
+hold on
+plot(t(2:end), gyro_m_controlled_phi)
+hold on
+xline(finishCalibrationTime, 'b--')
+xlabel('Time (sec)')
+ylabel('Angular Velocity (rad/s)')
+legend('NO Sensor Error', 'Controlled Error Integrated')
+title('Controlled Measured Angular Velocity Phi')
+% ylim([-5 5])
+
+subplot(3,1,3)
+plot(t, a.psi_dot(t))
+hold on
+plot(t(2:end), gyro_m_controlled_psi)
+hold on
+xline(finishCalibrationTime, 'b--')
+xlabel('Time (sec)')
+ylabel('Angular Velocity (rad/s)')
+legend('NO Sensor Error', 'Controlled Error Integrated')
+title('Controlled Measured Angular Velocity Psi')
 % ylim([-5 5])
 
 
-function s_dot = IMUDriftCorrection(time_i, a, prev_state)
+%% Functions
+
+function s_dot = IMUDriftCorrection(time_i, a, prev_state, finishCalibrationTime)
 
     % Current states
     vel_x = prev_state(1);
     vel_y = prev_state(2);
     vel_z = prev_state(3);
 
-    theta = prev_state(4);
-    phi = prev_state(5);
-    psi = prev_state(6);
+    angle_theta = prev_state(4);
+    angle_phi = prev_state(5);
+    angle_psi = prev_state(6);
 
     p_x = prev_state(7);
     p_y = prev_state(8);
@@ -540,7 +463,7 @@ function s_dot = IMUDriftCorrection(time_i, a, prev_state)
 
     specs = a.specs;
 
-    state = [vel_x; vel_y; vel_z; theta; phi; psi];
+    state = [vel_x; vel_y; vel_z; angle_theta; angle_phi; angle_psi];
     state_err_accum = [p_x; p_y; p_z; theta_err_accum; phi_err_accum; psi_err_accum];
 
     kw = a.kw;
@@ -549,39 +472,38 @@ function s_dot = IMUDriftCorrection(time_i, a, prev_state)
     state_0 = 0;
     state_dot_0 = 0;
     
-    % Get measured acceleration based on real angle
+    % Get real inertial accelerations
+    a_I = [a.real_accel_xI(time_i); a.real_accel_yI(time_i); a.real_accel_zI(time_i)];
+    ang_rate_i = [a.theta_dot(time_i) ,a.phi_dot(time_i), a.psi_dot(time_i)];
+    
+    % Get real angles
     theta_real = a.theta(time_i);
     phi_real = a.phi(time_i);
     psi_real = a.psi(time_i);
-
-    a_I = [a.real_accel_xI(time_i); a.real_accel_yI(time_i); a.real_accel_zI(time_i)];
-
-    a_S = Rotate_I_S(a_I, theta_real, phi_real, psi_real);
-
-    a_Sx_m = a.measured_accel(time_i, a.o_d_n_a_c, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift, a.noiseDistAccel, a_S(1));
-    a_Sy_m = a.measured_accel(time_i, a.o_d_n_a_c, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift, a.noiseDistAccel, a_S(2));
-    a_Sz_m = a.measured_accel(time_i, a.o_d_n_a_c, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift, a.noiseDistAccel, a_S(3));
-   
-    accel_S = [a_Sx_m; a_Sy_m; a_Sz_m];
-
-    theta_d = a.theta_dot_eq(time_i);
-    phi_d = a.phi_dot_eq(time_i);
-    psi_d = a.psi_dot_eq(time_i);
-
-    theta_dot_m = a.measured_gyro(time_i, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, theta_d);
-    phi_dot_m = a.measured_gyro(time_i, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, phi_d);
-    psi_dot_m = a.measured_gyro(time_i, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, psi_d);
-
-    accel_I = Rotate_S_I(accel_S, theta, phi, psi);
-    accel_I(3) = accel_I(3) + a.g;
     
-    % Remove gravity using trig
-    % corr_a = AccelRemoveGrav(accel_I, curr_angle, a);
-    % 
-    % measured_a_h = corr_a(1);
-    % measured_a_v = corr_a(3);
+    % Get real sensor frame accelerations
+    a_S = Rotate_I_S(a_I, theta_real, phi_real, psi_real);
+    
+    accel_m = a.measured_accel_3D(a, time_i, a_S);
 
-    measuredState = [accel_I', theta_dot_m, phi_dot_m, psi_dot_m];
+
+    gyro_m = a.measured_gyro_3D(a, time_i, ang_rate_i);
+
+    theta_use = theta_real;
+    phi_use = phi_real;
+    psi_use = psi_real;
+
+    if time_i > finishCalibrationTime
+        theta_use = angle_theta;
+        phi_use = angle_phi;
+        psi_use = angle_psi;
+    end
+
+    accel_I = Rotate_S_I(accel_m, theta_use, phi_use, psi_use);
+
+    accel_state = [accel_I(1) accel_I(2) accel_I(3)+a.g];
+
+    measuredState = [accel_state, gyro_m];
     corrected_state = compensateError(measuredState, specs, time_i);
     
     state_dot_m = corrected_state';

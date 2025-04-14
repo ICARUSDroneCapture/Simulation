@@ -53,8 +53,8 @@ a.noisyGyroCurve = @(t, real_ang_rate) real_ang_rate(t) + gyro_noise_std*randn(l
 %% Adding bias instability
 
 % But first, turn-on bias
-accel_turn_on_bias_offset = 0.1; % m/s^2
-gyro_turn_on_bias_offset = 0.1; % rad
+a.accel_turn_on_bias_offset = 0.1; % m/s^2
+a.gyro_turn_on_bias_offset = 0.1; % rad
 
 sigma_bias_accel = b_a * sqrt(imu_rate);
 sigma_bias_gyro = b_g * sqrt(imu_rate);
@@ -156,11 +156,11 @@ a.measured_gyro = @(t, o_d_n_g_c, biasStabDistGyro, biasTempDistGyro, gyro_drift
 % measured_gyro = a.measured_gyro(t, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift, a.noiseDistGyro, a.real_ang_rate);
 
 % 3D Versions of all the function handles, take vectors
-a.accel_drift_3D = @(t, accel, biasStabDistAccel, biasTempDistAccel) (1 + k).*accel + biasStabDistAccel(t)  + biasTempDistAccel(t) + accel_turn_on_bias_offset;
-a.gyro_drift_3D = @(t, ang_rate, biasStabDistGyro, biasTempDistGyro) (1 + k).*ang_rate + a.biasStabDistGyro(t) + biasTempDistGyro(t) + gyro_turn_on_bias_offset;
+a.accel_drift_3D = @(a, t, curr_accel) (1 + k).*curr_accel + a.biasStabDistAccel(t)  + a.biasTempDistAccel(t) + a.accel_turn_on_bias_offset;
+a.gyro_drift_3D = @(a, t, curr_ang_rate) (1 + k).*curr_ang_rate + a.biasStabDistGyro(t) + a.biasTempDistGyro(t) + a.gyro_turn_on_bias_offset;
 
-a.o_d_n_a_c_3D = @(t, biasStabDistAccel, biasTempDistAccel, accel_drift_3D, noiseDistAccel, real_accel) accel_drift_3D(t, real_accel, biasStabDistAccel, biasTempDistAccel) + noiseDistAccel(t);
-a.o_d_n_g_c_3D = @(t, biasStabDistGyro, biasTempDistGyro, gyro_drift_3D, noiseDistGyro, real_ang_rate) gyro_drift_3D(t, real_ang_rate, biasStabDistGyro, biasTempDistGyro) + noiseDistGyro(t);
+a.o_d_n_a_c_3D = @(a, t, curr_accel) a.accel_drift_3D(a, t, curr_accel) + a.noiseDistAccel(t);
+a.o_d_n_g_c_3D = @(a, t, curr_ang_rate) a.gyro_drift_3D(a, t, curr_ang_rate) + a.noiseDistGyro(t);
 
-a.measured_accel_3D = @(t, o_d_n_a_c_3D, biasStabDistAccel, biasTempDistAccel, accel_drift_3D, noiseDistAccel, real_accel) accel_resolution.*floor(o_d_n_a_c_3D(t, biasStabDistAccel, biasTempDistAccel, accel_drift_3D, noiseDistAccel, real_accel)./accel_resolution);
-a.measured_gyro_3D = @(t, o_d_n_g_c_3D, biasStabDistGyro, biasTempDistGyro, gyro_drift_3D, noiseDistGyro, real_ang_rate) gyro_resolution.*floor(o_d_n_g_c_3D(t, biasStabDistGyro, biasTempDistGyro, gyro_drift_3D, noiseDistGyro, real_ang_rate)./gyro_resolution);
+a.measured_accel_3D = @(a, t, curr_accel) accel_resolution.*floor(a.o_d_n_a_c_3D(a, t, curr_accel)./accel_resolution);
+a.measured_gyro_3D = @(a, t, curr_ang_rate) gyro_resolution.*floor(a.o_d_n_g_c_3D(a, t, curr_ang_rate)./gyro_resolution);

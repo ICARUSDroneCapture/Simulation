@@ -6,114 +6,48 @@ rng(1,"twister");
 
 set(groot,'DefaultLineLineWidth',1)
 
-simulationParameters;
-
-% Sensor Drift Control
-a.kw = 1200; % 
-a.kt = 0.6; % 
-
-close all;
-
-% Redefining acceleration/gyro curves for clarity
-
-a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
-a.real_vel = @(t) beta*alpha*cos(beta*t);
-a.real_accel = @(t, y) -beta^2*alpha*sin(beta*t); % [m*s^-2]
-% a.real_accel = @(t, y) 0*t; % [m*s^-2]
-a.real_ang = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
-a.real_ang_rate = @(t, y) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
-
-%% Sensor Model Aspects
-
-% Simulation time
-startTime = 0;
-finishTime = 60;
-tspan = [startTime finishTime]; % [s]
-
-% dt = 1/imu_rate;  % [s]
-dt = 0.0001;
-t = (tspan(1):dt:tspan(2))';
-t_count = length(t);
-indeces = @(t) floor(t/dt)+1;
-
-defineSignals
-
-scale_w = 1;
-scale_t = 1;
-
-a.kw = scale_w*a.beta_min; % 
-a.kt = scale_t*a.beta_max; % 
+simulationParameters
 
 %% Get Error Signal
 
-fprintf('\nIntegrating Acceleration (no Sensor Error)')
+fprintf('\nIntegrating Acceleration (with Sensor Error)')
 fprintf("\nTime: ")
 
 % Initial Angle
-p_vel0 = a.real_vel(tspan(1)); % Platform inertial angle [deg]
-
-[t, vel_base]= rk4_solver(a.real_accel, tspan, p_vel0, dt);
-
-% Integration Verification Plot
-figure
-plot(t, vel_base)
-hold on
-plot(t, a.real_vel(t))
-xlabel('Time (sec)')
-ylabel('Velocity (m/s)')
-legend('Integrated Velocity', 'Velocity Equation')
-title('Basic Integrated Velocity Plot')
-
-fprintf('\nFinished Integration with NO Sensor Error.\n')
-fprintf('\nStarting Integration WITH Sensor Error.')
-fprintf("\nTime: ")
+vel_base = a.real_vel_zI(t);
+p_vel0 = vel_base(1); % Platform inertial angle [deg]
 
 % Running simulation with sensor error
 
-accel_error_signal = zeros(length(t), 2);
-
-for i = 1:length(t)
-    time_i = t(i);
-
-    accel_i = a.real_accel(time_i);
-    curr_angle = a.real_ang(time_i);
-
-    measured_a_h = a.measured_accel_vert(time_i, a.o_d_n_a_c_v, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, accel_i, a.real_ang);
-    measured_a_v = a.measured_accel_horz(time_i, a.o_d_n_a_c_h, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, accel_i, a.real_ang);
-    
-    accel_error_signal(i, 1) = measured_a_h / cos(curr_angle);
-    accel_error_signal(i, 2) = -measured_a_v / cos(curr_angle) - a.g;
-end
+vel_z_over_time = a.real_vel_zI(t);
+accel_z_over_time = a.real_accel_zI(t);
+accel_with_error_signal = a.measured_accel_3D(a, t, accel_z_over_time);
 
 % Basic gyro signal (real angular rate with error)
 figure
-plot(t, a.real_accel(t))
+plot(t, a.real_accel_zI(t))
 hold on
-plot(t, accel_error_signal(:, 1))
-hold on
-plot(t, accel_error_signal(:, 2))
+plot(t, accel_with_error_signal)
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
-legend('Real Value', 'Accel Measured Signal (vertical)', 'Accel Measured Signal (horizontal)')
+legend('Real Value (with g)', 'Accel Measured Signal (inertial z)')
 title('Acceleration Real vs Measured')
 
-control_dynamics = @(t_i, state) accel_error_signal((floor(t_i./dt)+1), :)';
+control_dynamics = @(t_i, state) a.measured_accel_3D(a, t_i, a.real_accel_zI(t_i)+a.g);
 
-[t_error, vel_error]= rk4_solver(control_dynamics, tspan, [p_vel0 p_vel0], dt);
+[~, vel_error]= rk4_solver(control_dynamics, tspan, p_vel0, dt);
 
 fprintf('\nFinished Integration WITH Sensor Error.\n')
 
 %% Plotting Platform Velocity
 
 figure
-plot(t, a.real_vel(t))
+plot(t, a.real_accel_zI(t))
 hold on
-plot(t_error, vel_error(:, 1))
-hold on
-plot(t_error, vel_error(:, 2))
+plot(t, vel_error)
 xlabel('Time (sec)')
 ylabel('Velocity (m/s)')
-legend('NO Sensor Error', 'WITH Sensor Error (vertical)', 'WITH Sensor Error (horizontal)')
+legend('NO Sensor Error', 'WITH Sensor Error')
 title('Basic Integrated Velocity Plot')
 
 %% Getting and Plotting Velocity Error
@@ -124,7 +58,7 @@ sz = 2;
 plot_scale = 10;
 
 figure
-scatter(t_error, vel_diff, sz, 'filled', displayName="Velocity Error")
+scatter(t, vel_diff, sz, 'filled', displayName="Velocity Error")
 title('Integrated (vertical) Velocity Error vs Time')
 xlabel('Time (s)')
 ylabel('Error (m/s)')
@@ -141,13 +75,13 @@ accel_0 = 0;
 
 s0 = [vel_0 vel_0 vel_0 accel_0 accel_0 accel_0];
 
-[t_corr, vel_corr]= rk4_solver(control_dynamics, tspan, s0, dt);
+[~, vel_corr]= rk4_solver(control_dynamics, tspan, s0, dt);
 
 a_der = diff(vel_corr(:, 3)) / dt;
 figure
 plot(t(2:end), a_der)
 hold on
-plot(t, a.real_accel(t))
+plot(t, a.real_accel_zI(t) + a.g)
 xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 legend('Controlled Acceleration', 'Real Deck Acceleration')
@@ -157,51 +91,51 @@ fprintf('\nFinished Integration WITH Sensor Compensation Control Law.\n')
 figure
 plot(t, vel_base)
 hold on
-plot(t_error, vel_error(:, 1))
+plot(t, vel_error(:, 1))
 hold on
-plot(t_corr, vel_corr(:, 3))
+plot(t, vel_corr(:, 3))
 xlabel('Time (sec)')
 ylabel('Velocity (m/s)')
-legend('NO Sensor Error', 'WITH Sensor Error', 'Corrected (vertical) Accel Signal')
+legend('NO Sensor Error', 'WITH Sensor Error', 'Corrected (z axis) Accel Signal')
 title('Basic Integrated Velocity Plot')
 % ylim([-5 5])
 
-% %% Gravity Check
-% 
-% fprintf('\nStarting Integration WITH Sensor Compensation Control Law.')
-% fprintf("\nTime: ")
-% 
-% control_dynamics = @(t_i, state) AccelGravAddRemove(t_i, a, state);
-% 
-% vel_0 = 0;
-% accel_0 = 0;
-% 
-% s0 = [vel_0 vel_0 vel_0 accel_0 accel_0 accel_0];
-% 
-% [t_corr, vel_corr]= rk4_solver(control_dynamics, tspan, s0, dt);
-% 
-% a_der = diff(vel_corr(:, 3)) / dt;
-% figure
-% plot(t(2:end), a_der)
-% hold on
-% plot(t, a.real_accel(t))
-% xlabel('Time (sec)')
-% ylabel('Acceleration (m/s^2)')
-% legend('Controlled Acceleration', 'Real Deck Acceleration')
-% 
-% fprintf('\nFinished Integration WITH Sensor Compensation Control Law.\n')
-% 
-% figure
-% plot(t, vel_base)
-% hold on
-% plot(t_error, vel_error(:, 1))
-% hold on
-% plot(t_corr, vel_corr(:, 3))
-% xlabel('Time (sec)')
-% ylabel('Velocity (m/s)')
-% legend('NO Sensor Error', 'WITH Sensor Error', 'Corrected (vertical) Accel Signal')
-% title('Basic Integrated Velocity Plot')
-% % ylim([-5 5])
+
+accel_m_controlled_x = diff(vel_corr(:, 1))/dt;
+accel_m_controlled_y = diff(vel_corr(:, 2))/dt;
+accel_m_controlled_z = diff(vel_corr(:, 3))/dt;
+
+figure
+subplot(3,1,1)
+plot(t(2:end), accel_m_controlled_x)
+hold on
+plot(t, a.real_accel_xI(t))
+xlabel('Time (sec)')
+ylabel('Acceleration (m/s^2)')
+legend('NO Sensor Error', 'Controlled Error Integrated')
+title('Controlled Measured Acceleration X')
+% ylim([-5 5])
+
+subplot(3,1,2)
+plot(t(2:end), accel_m_controlled_y)
+hold on
+plot(t, a.real_accel_yI(t))
+xlabel('Time (sec)')
+ylabel('Acceleration (m/s^2)')
+legend('NO Sensor Error', 'Controlled Error Integrated')
+title('Controlled Measured Acceleration Y')
+% ylim([-5 5])
+
+subplot(3,1,3)
+plot(t(2:end), accel_m_controlled_z)
+hold on
+plot(t, a.real_accel_zI(t) + 9.81)
+xlabel('Time (sec)')
+ylabel('Acceleration (m/s^2)')
+legend('NO Sensor Error', 'Controlled Error Integrated')
+title('Controlled Measured Acceleration Z')
+% ylim([-5 5])
+
 
 function s_dot = AccelDriftCorrection(time_i, a, prev_state)
 
@@ -218,33 +152,34 @@ function s_dot = AccelDriftCorrection(time_i, a, prev_state)
     vel = [vel_x; vel_y; vel_z];
     vel_err_accum = [vel_err_accum_x; vel_err_accum_y; vel_err_accum_z];
 
-    kw = a.kw;
-    kt = a.kt;
+    kw = a.kw(1:3);
+    kt = a.kt(1:3);
 
     vel_0 = 0;
     vel_dot_0 = 0;
 
-    accel_i = a.real_accel(time_i);
-    curr_angle = a.real_ang(time_i);
-
-    a_h = a.measured_accel_vert(time_i, a.o_d_n_a_c_v, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, accel_i, a.real_ang);
-    a_v = a.measured_accel_horz(time_i, a.o_d_n_a_c_h, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, accel_i, a.real_ang);
+    a_I = [a.real_accel_xI(time_i); a.real_accel_yI(time_i); a.real_accel_zI(time_i)];
     
-    accel_state = [a_h a_h a_v];
+    theta_real = a.theta(time_i);
+    phi_real = a.phi(time_i);
+    psi_real = a.psi(time_i);
 
-    corr_a = AccelRemoveGrav(accel_state, curr_angle, a);
+    a_S = Rotate_I_S(a_I, theta_real, phi_real, psi_real);
+    
+    accel_S = a.measured_accel_3D(a, time_i, a_S);
 
-    measured_a_h = corr_a(1);
-    measured_a_v = corr_a(3);
+    accel_I = Rotate_S_I(accel_S, theta_real, phi_real, psi_real);
 
-    measuredState = [measured_a_h measured_a_h measured_a_v 0 0 0];
+    accel_state = [accel_I(1) accel_I(2) accel_I(3)+a.g];
+
+    measuredState = [accel_state 0 0 0];
     corrected_state = compensateError(measuredState, specs, time_i);
     
     vel_dot_m = [corrected_state(1); corrected_state(2); corrected_state(3)];
 
     vel_control = vel - vel_0;
 
-    vel_dot_comp = kt * vel_err_accum + kw * vel_control;
+    vel_dot_comp = kt .* vel_err_accum + kw .* vel_control;
 
     vel_dot = vel_dot_m + vel_dot_0 - vel_dot_comp;
 
@@ -252,41 +187,5 @@ function s_dot = AccelDriftCorrection(time_i, a, prev_state)
 
     s_dot(1:3) = vel_dot;
     s_dot(4:6) = vel_control;
-
-end
-
-
-function s_dot = AccelGravAddRemove(time_i, a, prev_state)
-
-    % Current states
-    vel_x = prev_state(1);
-    vel_y = prev_state(2);
-    vel_z = prev_state(3);
-
-    specs = a.specs;
-
-    vel = [vel_x; vel_y; vel_z];
-
-    accel_i = a.real_accel(time_i);
-    curr_angle = a.real_ang(time_i);
-
-    a_h = a.measured_accel_vert(time_i, a.o_d_n_a_c_v, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_vert, a.noiseDistAccel, accel_i, a.real_ang);
-    a_v = a.measured_accel_horz(time_i, a.o_d_n_a_c_h, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_horz, a.noiseDistAccel, accel_i, a.real_ang);
-    
-    accel_state = [a_h a_h a_v];
-
-    corr_a = AccelRemoveGrav(accel_state, curr_angle, a);
-
-    measured_a_h = corr_a(1);
-    measured_a_v = corr_a(3);
-
-    measuredState = [measured_a_h measured_a_h measured_a_v 0 0 0];
-    corrected_state = compensateError(measuredState, specs, time_i);
-    
-    vel_dot_m = [corrected_state(1); corrected_state(2); corrected_state(3)];
-
-    s_dot = zeros(3,1);
-
-    s_dot(1:3) = vel_dot_m;
 
 end
