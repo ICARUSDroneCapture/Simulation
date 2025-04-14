@@ -22,6 +22,7 @@ function animate(t_vec,y,d,theta, a)
     zB = B(3, :);
 
     theta2_fun = matlabFunction(theta, "Vars", {t});
+    theta2_fun = @(x) 0*x;
     theta2 = theta2_fun(t_vec);
     
     x1 = xB + a.l1 * cos(y(1,:) + theta2);

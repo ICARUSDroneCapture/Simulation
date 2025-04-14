@@ -8,19 +8,14 @@ q1_err_accum = S(3); % Error in desired angle integration
 pm_ddot = S(4:6); % Measured acceleration
 
 Iyy = a.Itot1(2,2);
-p_dot = [-a.l1*sin(q1 + a.thetad(t))*(q1_dot + a.thetad_dot(t));
-          0;
-         -a.l1*cos(q1 + a.thetad(t))*(q1_dot + a.thetad_dot(t))];
 
 %%% Control Law %%%
 
-q1_ref = -pi/4;
-
-C = a.C(pr);
+C = a.C(q1);
 ka = a.ka*C; % Acceleration [kg]
 
 % Proportion of relative position control
-B = a.B(pr);
+B = a.B(q1);
 kp = a.kp_c*C + a.kp_b*B; % Proportional 
 kd = a.kd_c*C + a.kd_b*B; % Derivative   
 ki = a.ki_c*C + a.ki_b*B; % Integral     
@@ -41,16 +36,20 @@ J = [-a.l1*sin(q1); 0;- a.l1*cos(q1)];
 
 tau_I = J.'*F_I;
 
-q1_err = q1 - q1_ref;
+q1_err = q1 - a.q1_ref;
 tau_r = -(kp*q1_err + ki*q1_err_accum + kd*q1_dot);
 
 tau = tau_I + tau_r;
+if abs(tau) > 0
+    fprintf('Torque: %.2f Nm, Time: %.4f s\n', tau, t)
+    tau = clip(tau, -2, 2);
+end
 
 %%% EOM %%%
 
 q1_ddot = -(a.m1*a.thetad_ddot(t)*a.r1^2 ...
-    - a.g*a.m1*cos(q1 + a.thetad(t))*a.r1 + a.B*q1_dot - a.N*tau ...
-    + a.MU*sign(q1_dot) + Iyy*a.thetad_ddot(t))/(a.m1*a.r1^2 + Iyy);
+    - a.g*a.m1*cos(q1 + a.thetad(t))*a.r1 + a.N*a.BF*q1_dot - a.N*tau ...
+    + a.N*a.MU*sign(q1_dot) + Iyy*a.thetad_ddot(t))/(a.m1*a.r1^2 + Iyy);
 
 % Calculating resulting platform acceleration
 p_ddot = [(-a.l1*sin(q1 + a.thetad(t))*(q1_ddot + a.thetad_ddot(t)) ...

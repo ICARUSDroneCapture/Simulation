@@ -1,4 +1,4 @@
-function plot1(t,y,ref_q1)
+function plot1(t,y, a)
 % plot1 plots one figure of q1, Dq1, q2, and Dq2 for positional control
 %
 % Inputs:
@@ -16,12 +16,12 @@ function plot1(t,y,ref_q1)
     xlabel("Time [s]")
     ylabel("q1 [rad]")
     title("q1 Over Time")
-    yline(pi,'r')
-    yline(-pi,'r')
-    yline(ref_q1, 'b--')
+    yline(a.q1_ref + a.w/2,'r')
+    yline(a.q1_ref - a.w/2,'r')
+    yline(a.q1_ref, 'b--')
     
     subplot(1,2,2)
-    plot(t,y(1,:))
+    plot(t,y(2,:))
     xlabel("Time [s]")
     ylabel("Dq1 [rad/s]")
     title("Dq1 Over Time")
