@@ -64,26 +64,24 @@ a.thetad_dot = @(t) (pi^2*cos((pi*t)/15).*sin((pi*t)/15))/15;
 a.thetad_ddot = @(t) (pi^3*cos((pi*t)/15).^2)/225 - (pi^3*sin((pi*t)/15).^2)/225;
 
 % Inertial Stabilization Control
-% a.ka = 40;  % Acceleration Control [kg]
-
-a.ka = 0;  % Acceleration Control [kg]
+a.ka = 0.5;  % Acceleration Control [kg]
 
 % Relative Position Control at center
-scale = 0;
-a.kp_c = scale*25;  % Proportional [kg*s^-2]
-a.kd_c = scale*300;  % Derivative [kg/s]    
-a.ki_c = scale*5;  % Integral [kg*s^-3] 
+scale = 1;
+a.kp_c = scale*0.05;  % Proportional [kg*s^-2]
+a.kd_c = scale*5;  % Derivative [kg/s]    
+a.ki_c = scale*0.5;  % Integral [kg*s^-3] 
 
 % Relative Position Control at boundaries
-% a.kp_b = 200;  % Proportional [kg*s^-2]
-% a.kd_b = 40;  % Derivative [kg/s]    
-% a.ki_b = 0.5;  % Integral [kg*s^-3]
+a.kp_b = 50;  % Proportional [kg*s^-2]
+a.kd_b = 10;  % Derivative [kg/s]    
+a.ki_b = 0.5;  % Integral [kg*s^-3]
 
-a.kp_b = 0;  % Proportional [kg*s^-2]
-a.kd_b = 0;  % Derivative [kg/s]    
-a.ki_b = 0;  % Integral [kg*s^-3]
+% a.kp_b = 0;  % Proportional [kg*s^-2]
+% a.kd_b = 0;  % Derivative [kg/s]    
+% a.ki_b = 0;  % Integral [kg*s^-3]
 
-a.q1_ref = 0;
+a.q1_ref = -pi/4;
 
 % -------------------------- Parameters -------------------------------- %
 a.w = pi; % Range of inputs
@@ -96,7 +94,7 @@ b = 0.8;
 r_b = 45*b; % Zero relative position control radius
 
 % Polynomial order
-n = 4;
+n = 1;
 
 
 % --------------------------- Mixing Functions ------------------------- %
@@ -114,4 +112,3 @@ k_b = 0;
 a.B = @(x) (a_b*abs(x-(d+sign(x-d)*r_b)).^n + k_b) .* (abs(x - d) > r_b & ...
        abs(x - d) <= a.w/2) ...
        + 1 .* (abs(x - d) > a.w/2);
-

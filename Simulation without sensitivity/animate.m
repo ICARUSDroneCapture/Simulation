@@ -21,9 +21,7 @@ function animate(t_vec,y,d,theta, a)
     xB = B(1, :);
     zB = B(3, :);
 
-    theta2_fun = matlabFunction(theta, "Vars", {t});
-    theta2_fun = @(x) 0*x;
-    theta2 = theta2_fun(t_vec);
+    theta2 = theta(t_vec);
     
     x1 = xB + a.l1 * cos(y(1,:) + theta2);
     z1 = zB - a.l1 * sin(y(1,:) + theta2);
@@ -45,6 +43,23 @@ function animate(t_vec,y,d,theta, a)
     h4 = line(xspan,deckLine,'LineWidth',2);
     h4.Color = [0.6350 0.0780 0.1840];
 
+    x_pr = @(x, q) a.l1 * cos(x+q);
+    z_pr = @(x, q) -a.l1 * sin(x+q);
+    q_d = a.q1_ref;
+    q_max = a.q1_ref + a.w/2;
+    q_min = a.q1_ref - a.w/2;
+    h5 = line([xB(1) x_pr(theta2(1),q_d)], ...
+              [zB(1) z_pr(theta2(1),q_d)], 'LineStyle', '--', ...
+                                            'LineWidth', 2);
+    h6 = line([xB(1) x_pr(theta2(1),q_max)], ...
+              [zB(1) z_pr(theta2(1),q_max)], 'LineStyle', '--', ...
+                                             'Color', 'k', ...
+                                             'LineWidth', 2);
+    h7 = line([xB(1) x_pr(theta2(1),q_min)], ...
+              [zB(1) z_pr(theta2(1),q_min)], 'LineStyle', '--', ...
+                                             'Color', 'k', ...
+                                             'LineWidth', 2);
+
     t = get(gca,'Title');
     set(t,'String',strcat('The Robotic Arm Animation (t = ', num2str(floor(t_vec(1))),' seconds)'));
     %title("The Robotic Arm Animation")
@@ -59,6 +74,12 @@ function animate(t_vec,y,d,theta, a)
         xspan = [xB(ii)-0.5*(sqrt(4/(1+(tan(theta2(ii)))^2))) 0];
         set(h4,'XData',xspan);
         set(h4,'YData',[-tan(theta2(ii))*(xspan(1)-xB(ii))+zB(ii) -tan(theta2(ii))*(xspan(2)-xB(ii))+zB(ii)]);
+        set(h5,'XData',[xB(ii) x_pr(theta2(ii),q_d)]);
+        set(h5,'YData',[zB(ii) z_pr(theta2(ii),q_d)]);
+        set(h6,'XData',[xB(ii) x_pr(theta2(ii),q_max)]);
+        set(h6,'YData',[zB(ii) z_pr(theta2(ii),q_max)]);
+        set(h7,'XData',[xB(ii) x_pr(theta2(ii),q_min)]);
+        set(h7,'YData',[zB(ii) z_pr(theta2(ii),q_min)]);
         set(t,'String',strcat("The Robotic Arm Animation (t = ", num2str(floor(t_vec(ii))), " seconds)"));
 
         drawnow;
