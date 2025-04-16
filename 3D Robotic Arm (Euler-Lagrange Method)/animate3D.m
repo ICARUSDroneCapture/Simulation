@@ -101,7 +101,7 @@ function animate3D(t_vec,y,platform,d,theta_D)
         set(t,'String',strcat("The Robotic Arm Animation (t = ", num2str(floor(t_vec(ii))), " seconds)"));
 
         drawnow;
-        pause(t_vec(ii)-t_vec(ii-1))
+        % pause(t_vec(ii)-t_vec(ii-1))
     end
     hold off;
 end
