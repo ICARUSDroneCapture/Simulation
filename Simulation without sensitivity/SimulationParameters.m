@@ -59,18 +59,19 @@ a.MU = mu1; %static friction matrix
 a.BF = b1; %kinetic friction matrix
 a.N = N1*eta1; %gearhead ratio/efficiency matrix
 
-a.thetad = @(t) (pi*sin((pi*t)/15).^2)/2;
-a.thetad_dot = @(t) (pi^2*cos((pi*t)/15).*sin((pi*t)/15))/15;
-a.thetad_ddot = @(t) (pi^3*cos((pi*t)/15).^2)/225 - (pi^3*sin((pi*t)/15).^2)/225;
+period = 7.5*2;
+a.thetad = @(t) (pi*sin((pi*t)/period).^2)/2;
+a.thetad_dot = @(t) (pi^2*sin((2*pi*t)/period))/(2*period);
+a.thetad_ddot = @(t) (pi^3*cos((2*pi*t)/period))/period^2;
 
 % Inertial Stabilization Control
-a.ka = 2;  % Acceleration Control [kg]
+a.ka = 0;  % Acceleration Control [kg]
 
 % Relative Position Control at center
 scale = 1;
-a.kp_c = scale*1;  % Proportional [kg*s^-2]
-a.kd_c = scale*4;  % Derivative [kg/s]    
-a.ki_c = scale*0;  % Integral [kg*s^-3] 
+a.kp_c = scale*0.1;  % Proportional [kg*s^-2]
+a.kd_c = scale*2;  % Derivative [kg/s]    
+a.ki_c = scale*0.025;  % Integral [kg*s^-3] 
 
 % Relative Position Control at boundaries
 a.kp_b = 50;  % Proportional [kg*s^-2]

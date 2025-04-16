@@ -6,12 +6,12 @@
 % housekeeping
 clear; clc; close all
 
-% calling constants
+% calling constants7
 SimulationParameters;
 
 % solving the system
 dt = 0.001; %[d]
-time_interval = [0 80]; %seconds
+time_interval = [0 60]; %seconds
 
 initial_conditions = [0; 0; 0; 
                        0; 0; 0]; %[q1; Dq1; int_q1_err; 
@@ -50,25 +50,22 @@ dz = 0*t; %[m] (DO NOT CHANGE)
 
 d =[dx;dy;dz];
 
-% the deck rotations
-period = 7.5*2; %[s]
-angle2 = @(x) 90*(pi/180)*(sin((2*pi/(2*period))*x)).^2; %deck rotation about its y-axis [rad]
-
 % plot the inertial position of the deck and the platform
 d_fun = matlabFunction(d, "Vars",{t});
 B = d_fun(x);
 
-theta2_fun = angle2;
-theta2_eval = theta2_fun(x);
+theta2_eval = a.thetad(x);
 
 xEE = B(1) + a.l1*cos(y(1,:)+theta2_eval);
 zEE = B(3) - a.l1*sin(y(1,:)+theta2_eval);
 
 xNotIso = B(1) + a.l1*cos(a.q1_ref+theta2_eval);
 zNotIso = B(3) - a.l1*sin(a.q1_ref+theta2_eval);
+t_eval = x(end)*0.5;
+t_idx = (x > t_eval);
 
-avgIsolation = calculateAverageIsolation(zEE, zNotIso);
-fprintf('Average isolation: %0.2f%%\n', avgIsolation*100);
+isolation = calculateIsolationEnergy(zEE(t_idx), zNotIso(t_idx));
+fprintf('Average isolation: %0.2f%%\n', isolation*100);
 
 % figure()
 % plot(0,0,'rx',"LineWidth",2)
@@ -82,6 +79,8 @@ fprintf('Average isolation: %0.2f%%\n', avgIsolation*100);
 % hold off
 
 figure;
+
+subplot(3,1,1)
 plot(x, zEE)
 hold on
 plot(x, zNotIso)
@@ -89,6 +88,35 @@ xlabel('Time (s)')
 ylabel('Vertical Position (m)')
 title('Inertial Position vs Time')
 legend('Isolated', 'Not Isolated')
+
+subplot(3,1,2)
+plot(x, y(6, :))
+hold on
+plot(x, y(1, :) - a.q1_ref)
+plot(x, y(3, :))
+plot(x, y(2, :))
+hold off
+xlabel('Time (s)')
+ylabel('Control States')
+title('Control State Values vs Time')
+legend('p_{ddot}', 'q', 'q_{int}', 'q_{dot}')
+
+torques = zeros(5, length(x));
+for i = 1:length(x)
+    taus = torqueValues(x(i), y(:, i), a);
+    torques(:, i) = taus;
+end
+
+subplot(3,1,3)
+hold on
+for i = 1:5
+    plot(x, torques(i, :))
+end
+hold off
+xlabel('Time (s)')
+ylabel('Toprque (Nm)')
+title('Torques vs Time')
+legend('K_a', 'K_p', 'K_i', 'K_d', 'Friction')
 
 
 % Level of inertial and boundary control
@@ -116,4 +144,4 @@ legend('Isolated', 'Not Isolated')
 % fprintf('Inertial Stability Isolation Percent = %3.2f%% \n',IsolationPercent)
 % 
 % % animate
-% animate(x,y, d, angle2, a)
+% animate(x,y, d, a.thetad, a)

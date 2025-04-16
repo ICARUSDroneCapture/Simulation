@@ -26,10 +26,15 @@ d =[dx;dy;dz];
 d_dot = diff(d,'t');
 
 % the deck rotations
-period = 7.5*4; %s
+% period = 7.5*4; %s
+syms period
 angle1 = 0*t; % deck rotation about its x-axis [rad] (DO NOT CHANGE)
-angle2 = 90*(pi/180)*(sin((2*pi/(period))*t))^2; %deck rotation about its y-axis [rad]
+angle2 = 90*(pi/180)*(sin((2*pi/(2*period))*t))^2; %deck rotation about its y-axis [rad]
 angle3 = 0*t; %deck rotation about its z-axis [rad] (DO NOT CHANGE)
+
+angle2 = simplify(angle2)
+angle2_dot = simplify(diff(angle2,'t'))
+angle2_ddot = simplify(diff(angle2,'t','t'))
 
 % Initial Conditions
 q1_init = -0.1;
