@@ -6,108 +6,23 @@ rng(1,"twister");
 
 set(groot,'DefaultLineLineWidth',1)
 
-simulationParameters;
-
-close all;
-
-%% Sensor Model Aspects
-
-% Simulation time
-startTime = 0;
-finishTime = 20;
-tspan = [startTime finishTime]; % [s]
-
-% dt = 1/imu_rate;  % [s]
-dt = 0.0001;
-t = (tspan(1):dt:tspan(2))';
-t_count = length(t);
-indeces = @(t) floor(t/dt)+1;
-
-defineSignals
-% defineSignalsNoNoise
-
-%% 3D motion equations
-
-% a.real_pos_xI = @(t) 0.4/(beta^2)*sin(beta*t/2);
-% a.real_pos_yI = @(t) 1.6/(beta^2)*sin(beta*t/4);
-% a.real_pos_zI = @(t) alpha*sin(beta*t) + hdeck;
-% 
-% a.real_vel_xI = @(t) 0.2/beta*cos(beta/2*t);
-% a.real_vel_yI = @(t) 0.4/beta*cos(beta/4*t);
-% a.real_vel_zI = @(t) beta*alpha*cos(beta*t);
-% 
-% a.real_accel_xI = @(t) -0.1*sin(beta/2*t); % [m*s^-2]
-% a.real_accel_yI = @(t) -0.1*sin(beta/4*t); % [m*s^-2]
-% a.real_accel_zI = @(t) -beta^2*alpha*sin(beta*t) - 9.81; % [m*s^-2]
-% 
-% a.theta = @(t) -atan(beta*alpha*cos(beta*t)); % [rad]
-% a.phi = @(t) atan(0.2/beta*cos(beta/2*t)); % [rad]
-% a.psi = @(t) atan(0.4/beta*cos(beta/4*t)); % [rad]
-% 
-% % a.theta_dot = @(t) ((alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
-% % a.phi_dot = @(t) ((-0.1*sin(beta/2*t))/(((0.04*(cos(beta*t/2).^2))/(beta^2))+1)); % [rad/s]
-% % a.psi_dot = @(t) ((-0.1*sin(beta/4*t))/(((0.16*(cos(beta*t/4).^2))/(beta^2))+1)); % [rad/s]
-% 
-% % Angular rate needs to be taken manually since the derivative equation is +/-
-% theta_vals = a.theta(t);
-% phi_vals = a.phi(t);
-% psi_vals = a.psi(t);
-% 
-% theta_dot = zeros(1, length(t));
-% phi_dot = zeros(1, length(t));
-% psi_dot = zeros(1, length(t));
-% 
-% theta_dot(2:end) = diff(theta_vals)/dt;
-% phi_dot(2:end) = diff(phi_vals)/dt;
-% psi_dot(2:end) = diff(psi_vals)/dt;
-% 
-% a.theta_dot_eq = @(t) theta_dot(floor(t./dt)+1);
-% a.phi_dot_eq = @(t) phi_dot(floor(t./dt)+1);
-% a.psi_dot_eq = @(t) psi_dot(floor(t./dt)+1);
-% 
-% s = @(x) sin(x);
-% c = @(x) cos(x);
-% 
-% %% Simplifying to just z-direction equations for now
-% a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
-% a.real_vel = @(t) beta*alpha*cos(beta*t);
-% a.real_accel = @(t, y) -beta^2*alpha*sin(beta*t) - 9.81; % [m*s^-2]
-% a.real_ang = @(t) atan(0.4/beta*cos(beta/4*t)); % [rad]
-% a.real_ang_rate = @(t, y) theta_dot(floor(t./dt)+1);
-
-% Redefining acceleration/gyro curves for clarity
-
-a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
-a.real_vel = @(t) beta*alpha*cos(beta*t);
-a.real_accel = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
-% a.real_accel = @(t) 0*t; % [m*s^-2]
-a.real_ang = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
-a.real_ang_rate = @(t) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
+simulationParameters
 
 %% Run Control Dynamics Integration
-
-a.dt = dt;
 
 fprintf('\nStarting Integration with NO Sensor Error.')
 fprintf("\nTime: ")
 
-% % Initial States
-% p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
-% p_dot0 = 0;   % Platform velocity [m/s]
-% pr_err_accum0 = 0;            % Integral of relative position error [m*s]
-% pm0 = p0;                     % Platform inetegrated position [m]
-% pm_dot = p_dot0;              % Platform integrated velocity [m/s]
-% pm_ddot = a.d_ddot(tspan(1)); % Platform measured acceleration [m*s^-2]
-% p_theta0 = a.real_ang(tspan(1)); % Platform inertial angle [deg]
+% Initial States
 
 % Initial States
-p0 =  a.d(tspan(1))+a.pr_d;             % Platform position [m]
+p0 =  a.real_pos_zI(tspan(1))+a.pr_d;             % Platform position [m]
 p_dot0 = 0;             % Platform velocity [m/s]
 pr_err_accum0 = 0;                      % Integral of relative position error [m*s]
 pm0 = p0;                               % Platform integrated position [m]
 pm_dot = p_dot0;                        % Platform integrated velocity [m/s]
 pm_ddot = 0;           % Platform measured acceleration [m*s^-2]
-p_theta0 = a.real_ang(tspan(1));   % Platform inertial angle [deg]
+p_theta0 = a.psi(tspan(1));   % Platform inertial angle [deg]
 p_theta_err_accum0 = 0;
 
 s0 = [p0 p_dot0 pr_err_accum0 pm0 pm_dot pm_ddot];
@@ -127,8 +42,7 @@ fprintf("\nTime: ")
 % Running simulation with sensor error
 
 s0 = [p0 p_dot0 pr_err_accum0 pm0 pm_dot pm_ddot p_theta0 p_theta_err_accum0];
-% control_dynamics_err = @(t, state) rigidArmControl_FixedInt(t, a, state);
-control_dynamics_err = @(t, state) rigidArmControl_3D_Trig(t, a, state);
+control_dynamics_err = @(t, state) rigidArmControl_1D(t, a, state);
 
 [t_error, sol_error]= rk4_solver(control_dynamics_err, tspan, s0, dt);
 

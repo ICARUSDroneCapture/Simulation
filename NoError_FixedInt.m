@@ -32,7 +32,7 @@ function state_dot = NoError_FixedInt(t, a, prev_state)
     pm_ddot = prev_state(6);
     
     % Error in relative position (distance to center of operation region)
-    p = pi-a.d(t);
+    p = pi-a.real_pos_zI(t);
     p_err = p-a.pr_d;
     
     % For testing gains without mixing proportions
@@ -71,7 +71,7 @@ function state_dot = NoError_FixedInt(t, a, prev_state)
     c_i = a.initial_scale(t); % Initial scale of gains
     f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
     % Relative position control force
-    f_pr = -(kp*p_err + ki*p_err_accum + kd*(pm_dot-a.d_dot(t)));
+    f_pr = -(kp*p_err + ki*p_err_accum + kd*(pm_dot-a.real_vel_zI(t)));
     
     % Platform EOM
     p_ddot = (f_i+f_pr) / a.m;

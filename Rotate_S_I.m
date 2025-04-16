@@ -29,10 +29,23 @@ function a_I = Rotate_S_I(a_S, theta, phi, psi)
     R_1_2 = [1      0       0;
              0      c(phi)  s(phi);
              0      -s(phi) c(phi)];
-    
+
     R_2_3 = [c(theta)  0    s(theta);
              0         1    0;
              -s(theta) 0    c(theta)];
+
+    % R_I_1 = [c(psi)     s(psi)      0;
+    %          -s(psi)    c(psi)      0;
+    %          0          0           1];
+    % 
+    % R_1_2 = [c(theta)   0           -s(theta);
+    %          0          1           s(phi);
+    %          s(theta)   0           c(theta)];
+    % 
+    % R_2_3 = [1          0           0;
+    %          0          c(phi)      s(phi);
+    %          0          -s(phi)     c(phi)];
+
     
     R_I_S = R_2_3 * R_1_2 * R_I_1;
 

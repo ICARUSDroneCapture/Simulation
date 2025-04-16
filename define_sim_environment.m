@@ -7,6 +7,7 @@ tspan = [startTime finishTime]; % [s]
 
 % dt = 1/imu_rate;  % [s]
 dt = 0.0001;
+a.dt = dt;
 t = (tspan(1):dt:tspan(2))';
 t_count = length(t);
 indeces = @(t) floor(t/dt)+1;

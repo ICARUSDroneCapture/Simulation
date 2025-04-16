@@ -6,98 +6,9 @@ rng(1,"twister");
 
 set(groot,'DefaultLineLineWidth',1)
 
-simulationParameters;
-
-close all;
-
-
-%% 3D Gains
-
-scale_w = 1;
-scale_t = 1;
-
-% a.kw = scale_w*a.beta_min; % 
-% a.kt = scale_t*a.beta_max; % 
-
-T_x = 2*pi/(beta); % wave frequency [rad/s] (15 sec)
-T_y = 2*pi/(beta); % wave frequency [rad/s] (30 sec)
-T_z = 2*pi/(beta); % wave frequency [rad/s] (7.5 sec)
-
-t_min_x = 2;
-t_max_x = 9;
-
-t_min_y = 2;
-t_max_y = 9;
-
-t_min_z = 2;
-t_max_z = 9;
-
-a.beta_min_x = 1/t_min_x;
-a.beta_min_y = 1/t_min_y;
-a.beta_min_z = 1/t_min_z;
-
-a.beta_max_x = 1/t_max_x;
-a.beta_max_y = 1/t_max_y;
-a.beta_max_z = 1/t_max_z;
-
-a.kw = [scale_t*a.beta_max_x; scale_t*a.beta_max_y; scale_t*a.beta_max_z; scale_t*a.beta_max_x; scale_t*a.beta_max_y; scale_t*a.beta_max_z];
-a.kt = [scale_w*a.beta_min_x; scale_w*a.beta_min_y; scale_w*a.beta_min_z; scale_w*a.beta_min_x; scale_w*a.beta_min_y; scale_w*a.beta_min_z];
-
-%% Sensor Model Aspects
-
-% Simulation time
-startTime = 0;
-finishTime = 20;
-tspan = [startTime finishTime]; % [s]
-
-% dt = 1/imu_rate;  % [s]
-dt = 0.0001;
-t = (tspan(1):dt:tspan(2))';
-t_count = length(t);
-indeces = @(t) floor(t/dt)+1;
-
-defineSignals
-% defineSignalsNoNoise
-
-%% 3D motion equations
-
-a.real_pos_xI = @(t) alpha*sin(beta*t) + hdeck;
-a.real_pos_yI = @(t) alpha*sin(beta*t) + hdeck;
-a.real_pos_zI = @(t) alpha*sin(beta*t) + hdeck;
-
-a.real_vel_xI = @(t) beta*alpha*cos(beta*t);
-a.real_vel_yI = @(t) beta*alpha*cos(beta*t);
-a.real_vel_zI = @(t) beta*alpha*cos(beta*t);
-
-a.real_accel_xI = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
-a.real_accel_yI = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
-a.real_accel_zI = @(t) -beta^2*alpha*sin(beta*t); % [m*s^-2]
-
-% a.theta = @(t) -atan(beta*alpha*cos(beta*t)); % [rad]
-% a.phi = @(t) atan(0.2/beta*cos(beta/2*t)); % [rad]
-% a.psi = @(t) atan(0.4/beta*cos(beta/4*t)); % [rad]
-
-a.psi = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
-a.theta = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
-a.phi = @(t) atan(beta*alpha*cos(beta*t)); % [rad]
-
-a.theta_dot_eq = @(t) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
-a.phi_dot_eq = @(t) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
-a.psi_dot_eq = @(t) (-(alpha*beta^2*sin(beta*t))./(alpha^2*beta^2*(cos(beta*t).^2)+1)); % [rad/s]
-
-s = @(x) sin(x);
-c = @(x) cos(x);
-
-%% Simplifying to just z-direction equations for now
-a.real_pos = @(t) alpha*sin(beta*t) + hdeck;
-a.real_vel = @(t) beta*alpha*cos(beta*t);
-a.real_accel = @(t, y) -beta^2*alpha*sin(beta*t) - 9.81; % [m*s^-2]
-a.real_ang = @(t) atan(0.4/beta*cos(beta/4*t)); % [rad]
-a.real_ang_rate = @(t, y) theta_dot(floor(t./dt)+1);
+simulationParameters
 
 %% Run Control Dynamics Integration
-
-a.dt = dt;
 
 fprintf('\nStarting Integration with NO Sensor Error.')
 fprintf("\nTime: ")
@@ -112,20 +23,20 @@ fprintf("\nTime: ")
 % p_theta0 = a.real_ang(tspan(1)); % Platform inertial angle [deg]
 
 % Initial States
-p0 =  a.d(tspan(1))+a.pr_d;             % Platform position [m]
+p0 =  a.real_pos_zI(tspan(1)) + a.pr_d;             % Platform position [m]
 p_dot0 = 0;             % Platform velocity [m/s]
 pr_err_accum0 = 0;                      % Integral of relative position error [m*s]
 pm0 = p0;                               % Platform integrated position [m]
 pm_dot = p_dot0;                        % Platform integrated velocity [m/s]
 pm_ddot = 0;           % Platform measured acceleration [m*s^-2]
-p_theta0 = a.real_ang(tspan(1));   % Platform inertial angle [deg]
+p_theta0 = a.psi(tspan(1));   % Platform inertial angle [deg]
 p_theta_err_accum0 = 0;
 
 s0 = [p0 p_dot0 pr_err_accum0 pm0 pm_dot pm_ddot];
 
 control_dynamics = @(t, state) NoError_FixedInt(t, a, state);
 
-[t_control, sol_control]= rk4_solver(control_dynamics, tspan, s0, dt);
+[~, sol_control]= rk4_solver(control_dynamics, tspan, s0, dt);
 
 
 fprintf('\nFinished Integration with NO Sensor Error.\n')
@@ -139,7 +50,7 @@ fprintf("\nTime: ")
 
 p0_x = 0;
 p0_y = 0;
-p0_z = 0;
+p0_z = a.real_pos_zI(tspan(1)) + a.pr_d;
 p0 = [p0_x p0_y p0_z];
 
 p_dot0_x = 0;
@@ -167,9 +78,9 @@ pm_ddot_y = 0;
 pm_ddot_z = 0;
 pm_ddot = [pm_ddot_x pm_ddot_y pm_ddot_z];
 
-p_theta0_x = 0;
-p_theta0_y = 0;
-p_theta0_z = 0;
+p_theta0_x = a.theta(tspan(1));
+p_theta0_y = a.phi(tspan(1));
+p_theta0_z = a.psi(tspan(1));
 p_theta0 = [p_theta0_x p_theta0_y p_theta0_z];
 
 p_theta_err_accum0_x = 0;
@@ -180,23 +91,23 @@ p_theta_err_accum0 = [p_theta_err_accum0_x p_theta_err_accum0_y p_theta_err_accu
 s0 = [p0 p_dot0 pr_err_accum0 pm0 pm_dot pm_ddot p_theta0 p_theta_err_accum0];
 control_dynamics_err = @(t, state) rigidArmControl_3D(t, a, state);
 
-[t_error, sol_error]= rk4_solver(control_dynamics_err, tspan, s0, dt);
+[~, sol_error]= rk4_solver(control_dynamics_err, tspan, s0, dt);
 
 % Get platform position in inertial frame, with deck as reference zero
-plat_pos = sol_error(:,1);
+plat_pos = sol_error(:,3);
 
 fprintf('\nFinished Integration WITH Sensor Error.\n')
 
 % %% Plotting other states
 % 
 % figure
-% plot(t_error, sol_error(:, 1))
+% plot(t, sol_error(:, 1))
 % xlabel('Time (sec)')
 % ylabel('Velocity (m/s)')
 % title('Platform Inertial Velocity')
 % 
 % figure
-% plot(t_error, sol_error(:, 2))
+% plot(t, sol_error(:, 2))
 % xlabel('Time (sec)')
 % ylabel('Angle (rad)')
 % title('Platform Angle')
@@ -204,17 +115,18 @@ fprintf('\nFinished Integration WITH Sensor Error.\n')
 %% Plotting Platform Position
 
 figure;
-plot(t_control, sol_control(:,3))
+plot(t, sol_control(:,1))
 hold on
-plot(t_error, plat_pos)
+% plot(t, plat_pos)
+% hold on
+plot(t,a.real_pos_zI(t))
 hold on
-plot(t,a.d(t))
+plot(t, a.real_pos_zI(t)+1)
 hold on
-plot(t, a.d(t)+1)
+plot(t, a.real_pos_zI(t)+0.09, '--')
 hold on
-plot(t, a.d(t)+0.09, '--')
-hold on
-plot(t, a.d(t)+0.5+0.41, '--')
+plot(t, a.real_pos_zI(t)+0.5+0.41, '--')
+ylim([0 3])
 title('Platform Inertial Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
@@ -225,9 +137,9 @@ legend('Fixed-Step (without sensor error) Integration', 'Fixed-Step (with sensor
 %% Plotting Platform Angle
 
 figure;
-plot(t_error, 180/pi*a.theta(t))
+plot(t, 180/pi*a.theta(t))
 hold on
-plot(t_error, 180/pi*sol_error(:,19))
+plot(t, 180/pi*sol_error(:,19))
 title('Platform Angle vs Time')
 xlabel('Time (s)')
 ylabel('Angle (deg)')
@@ -254,7 +166,7 @@ sz = 2;
 plot_scale = 0.001;
 
 figure
-scatter(t_error, pos_err*100, sz, 'filled', displayName="Positional Error")
+scatter(t, pos_err*100, sz, 'filled', displayName="Positional Error")
 % hold on
 % plot(t,a.d(t)/200, displayName="Deck Disturbance")
 % hold on
@@ -274,7 +186,7 @@ plot_scale = 0.00001;
 growth = diff(pos_err);
 
 % figure
-% scatter(t_error(2:end), growth*100, sz, 'filled', displayName="Positional Error")
+% scatter(t(2:end), growth*100, sz, 'filled', displayName="Positional Error")
 % hold on
 % plot(t,plot_scale*a.d(t))
 % hold on

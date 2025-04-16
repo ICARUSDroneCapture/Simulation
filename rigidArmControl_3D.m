@@ -21,7 +21,6 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     
     % Current states
 
-
     p_x = prev_state(1);
     p_y = prev_state(2);
     p_z = prev_state(3);
@@ -70,7 +69,7 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     % ------------------------- Check Reference Frames --------------------
 
     % Error in relative position (distance to center of operation region)
-    pr = pm-a.d(t);
+    pr = pm-a.real_pos_zI(t);
     pr_err = pr-a.pr_d;
     
     % ----------------- Inserting measured accel manually -----------------
@@ -87,41 +86,38 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     a_S = Rotate_I_S(a_I, theta_real, phi_real, psi_real);
 
     % Add sensor error to acceleration measurements
-    accel_S = a.measured_accel_3D(t, a.o_d_n_a_c_3D, a.biasStabDistAccel, a.biasTempDistAccel, a.accel_drift_3D, a.noiseDistAccel, a_S);
+    accel_S = a.measured_accel_3D(a, t, a_S);
     % accel_S = a_S;
 
     % Get REAL angular velocity
-    theta_d = a.theta_dot(t);
-    phi_d = a.phi_dot(t);
-    psi_d = a.psi_dot(t);
-
-    angle_d = [theta_d; phi_d; psi_d];
+    angle_d = [a.theta_dot(t); a.phi_dot(t); a.psi_dot(t)];
 
     % Add sensor error to gyroscope measurements
-    gyro = a.measured_gyro_3D(t, a.o_d_n_g_c_3D, a.biasStabDistGyro, a.biasTempDistGyro, a.gyro_drift_3D, a.noiseDistGyro, angle_d);
+    gyro = a.measured_gyro_3D(a, t, angle_d);
     % gyro = angle_d;
 
     % Rotate realistic sensor acceleration measurements back to inertial
     % frame (still has g), using our INTEGRATED angle (has integration error)
-    accel_I = Rotate_S_I(accel_S, theta, phi, psi);
+    accel_I = Rotate_S_I(accel_S, theta_real, phi_real, psi_real);
     % accel_I = Rotate_S_I(accel_S, theta_real, phi_real, psi_real);
     % accel_I = a_I;
 
     % Simply remove g from inertial z vector
     % g is positive in simulation parameters. When measured it would be
     % negative though, hence why we add it here
-    accel_I(3) = accel_I(3) + a.g;
+    accel_I = [accel_I(1) accel_I(2) accel_I(3)+a.g];
 
     % Assign our acceleration and gyroscope measurements, with gravity
     % removed, to our vector for sensor error correction
-    measured_state = [accel_I; gyro]';
+    measured_state = [accel_I, gyro'];
 
     % Compensate for constant error values
     corrected_state = compensateError(measured_state, specs, t);
 
+    int_state = [-p_dot; p_theta; pr_err; p_theta_err_accum];
+    
     % input: [velocity; theta; position; theta_err_accum]
     % output: [accel; theta_dot; vel; theta]
-    int_state = [-p_dot; p_theta; pr_err; p_theta_err_accum];
     state_control = DriftCorrection(a, int_state, corrected_state);
 
     pm_ddot = state_control(1:3);
@@ -164,7 +160,7 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     f_i = -(ka.*pm_ddot + kv.*pm_dot + ks.*pm).*c_i;
     % f_i = 0.1
     % Relative position control force
-    f_pr = -(kp.*pr_err + ki.*pr_err_accum + kd.*(pm_dot-a.d_dot(t)));
+    f_pr = -(kp.*pr_err + ki.*pr_err_accum + kd.*(pm_dot-a.real_vel_zI(t)));
     
     % Platform EOM
     p_ddot = (f_i+f_pr) / a.m;

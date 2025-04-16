@@ -39,22 +39,7 @@ function state = compensateError(measuredState, specs, time, curr_angle)
     B_gz = B_gx;
 
     % Bias
-
-    % ACCEL_BIAS = [b_a b_a b_a]';
-    % GYRO_BIAS = [b_g b_g b_g]';
-
-    ACCEL_BIAS = [0 0 0]';
-    GYRO_BIAS = [0 0 0]';
-
-    theta_err = b_g/2*time + ARW*sqrt(time);
-    % theta_err = b_g*time + ARW*sqrt(time);
-
-    a_adjusted_x_y = measured_accel(1) - ACCEL_BIAS(1);
-    a_adjusted_z = measured_accel(3) - ACCEL_BIAS(3);
-    a_adjusted = [a_adjusted_x_y; a_adjusted_x_y; a_adjusted_z];
-
-    % Adding calibration error of around 2 bits of accuracy
-    a_adjusted = a_adjusted + 2*accel_resolution*randn(1);
+    a_adjusted = [measured_accel(1); measured_accel(2); measured_accel(3)];
     
     A_FIX = inv([1+S_x+dS_x  M_xy       M_xz
                 M_yx         1+S_y+dS_y M_yz
@@ -66,7 +51,7 @@ function state = compensateError(measuredState, specs, time, curr_angle)
                   0     B_gy  0
                   0     0     B_gz];
 
-    g_adjusted = measured_gyro - GYRO_BIAS - G_DEP_BIAS*corrected_a;
+    g_adjusted = measured_gyro - G_DEP_BIAS*corrected_a;
     
     % Adding calibration error of around 2 bits of accuracy
     g_adjusted = g_adjusted + 2*gyro_resolution*randn(1);

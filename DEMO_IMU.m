@@ -474,18 +474,17 @@ function s_dot = IMUDriftCorrection(time_i, a, prev_state, finishCalibrationTime
     
     % Get real inertial accelerations
     a_I = [a.real_accel_xI(time_i); a.real_accel_yI(time_i); a.real_accel_zI(time_i)];
-    ang_rate_i = [a.theta_dot(time_i) ,a.phi_dot(time_i), a.psi_dot(time_i)];
+    ang_rate_i = [a.theta_dot(time_i); a.phi_dot(time_i); a.psi_dot(time_i)];
     
     % Get real angles
     theta_real = a.theta(time_i);
     phi_real = a.phi(time_i);
     psi_real = a.psi(time_i);
-    
+
     % Get real sensor frame accelerations
-    a_S = Rotate_I_S(a_I, theta_real, phi_real, psi_real);
+    a_S = Rotate_I_S(a_I, phi_real, theta_real, psi_real);
     
     accel_m = a.measured_accel_3D(a, time_i, a_S);
-
 
     gyro_m = a.measured_gyro_3D(a, time_i, ang_rate_i);
 
@@ -498,12 +497,12 @@ function s_dot = IMUDriftCorrection(time_i, a, prev_state, finishCalibrationTime
         phi_use = angle_phi;
         psi_use = angle_psi;
     end
-
-    accel_I = Rotate_S_I(accel_m, theta_use, phi_use, psi_use);
+    
+    accel_I = Rotate_S_I(accel_m, phi_use, psi_use, theta_use);
 
     accel_state = [accel_I(1) accel_I(2) accel_I(3)+a.g];
 
-    measuredState = [accel_state, gyro_m];
+    measuredState = [accel_state, gyro_m'];
     corrected_state = compensateError(measuredState, specs, time_i);
     
     state_dot_m = corrected_state';
