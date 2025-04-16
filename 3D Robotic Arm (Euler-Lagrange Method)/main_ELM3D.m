@@ -22,7 +22,7 @@ d_ddot = diff(d,'t',2);
 
 % the deck rotations
 angle1 = 0*t; % deck rotation about its x-axis [rad]
-angle2 = 10*(pi/180)*sin((2*pi/(period*2))*t); %deck rotation about its y-axis [rad]
+angle2 = 10*(pi/180)*sin((2*pi/(period))*t); %deck rotation about its y-axis [rad]
 angle3 = 0*t; %deck rotation about its z-axis [rad]
 
 theta_D = [angle1;angle2;angle3];
