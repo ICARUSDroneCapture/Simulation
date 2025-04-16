@@ -64,13 +64,13 @@ a.thetad_dot = @(t) (pi^2*cos((pi*t)/15).*sin((pi*t)/15))/15;
 a.thetad_ddot = @(t) (pi^3*cos((pi*t)/15).^2)/225 - (pi^3*sin((pi*t)/15).^2)/225;
 
 % Inertial Stabilization Control
-a.ka = 0.5;  % Acceleration Control [kg]
+a.ka = 2;  % Acceleration Control [kg]
 
 % Relative Position Control at center
 scale = 1;
-a.kp_c = scale*0.05;  % Proportional [kg*s^-2]
-a.kd_c = scale*5;  % Derivative [kg/s]    
-a.ki_c = scale*0.5;  % Integral [kg*s^-3] 
+a.kp_c = scale*1;  % Proportional [kg*s^-2]
+a.kd_c = scale*4;  % Derivative [kg/s]    
+a.ki_c = scale*0;  % Integral [kg*s^-3] 
 
 % Relative Position Control at boundaries
 a.kp_b = 50;  % Proportional [kg*s^-2]
@@ -94,7 +94,7 @@ b = 0.8;
 r_b = 45*b; % Zero relative position control radius
 
 % Polynomial order
-n = 1;
+n = 4;
 
 
 % --------------------------- Mixing Functions ------------------------- %

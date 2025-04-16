@@ -11,7 +11,7 @@ SimulationParameters;
 
 % solving the system
 dt = 0.001; %[d]
-time_interval = [0 70]; %seconds
+time_interval = [0 80]; %seconds
 
 initial_conditions = [0; 0; 0; 
                        0; 0; 0]; %[q1; Dq1; int_q1_err; 
@@ -20,7 +20,7 @@ initial_conditions = [0; 0; 0;
 MFun = @(t, y)EOM_V3(t, y, a);
 % tic
 % for i = 1:20
-[sol.x, sol.y]= rk4_solver(MFun,time_interval,initial_conditions,dt);
+[sol.x, sol.y]= rk4_solver(MFun,time_interval,initial_conditions, dt);
 % end
 % toc
 % sol.y = sol.y';
@@ -64,6 +64,12 @@ theta2_eval = theta2_fun(x);
 xEE = B(1) + a.l1*cos(y(1,:)+theta2_eval);
 zEE = B(3) - a.l1*sin(y(1,:)+theta2_eval);
 
+xNotIso = B(1) + a.l1*cos(a.q1_ref+theta2_eval);
+zNotIso = B(3) - a.l1*sin(a.q1_ref+theta2_eval);
+
+avgIsolation = calculateAverageIsolation(zEE, zNotIso);
+fprintf('Average isolation: %0.2f%%\n', avgIsolation*100);
+
 % figure()
 % plot(0,0,'rx',"LineWidth",2)
 % hold on
@@ -77,9 +83,13 @@ zEE = B(3) - a.l1*sin(y(1,:)+theta2_eval);
 
 figure;
 plot(x, zEE)
+hold on
+plot(x, zNotIso)
 xlabel('Time (s)')
 ylabel('Vertical Position (m)')
 title('Inertial Position vs Time')
+legend('Isolated', 'Not Isolated')
+
 
 % Level of inertial and boundary control
 % intert = a.C(y(1,:));

@@ -41,7 +41,7 @@ tau_r = -(kp*q1_err + ki*q1_err_accum + kd*q1_dot);
 
 tau_c = tau_I + tau_r;
 if abs(tau_c) > 0.5
-    fprintf('Torque: %.2f Nm, Time: %.4f s\n', tau_c, t)
+    % fprintf('Torque: %.2f Nm, Time: %.4f s\n', tau_c, t)
     tau_c = clip(tau_c, -2, 2);
 end
 
@@ -89,6 +89,10 @@ dS = [q1_dot;
       q1_ddot;
       q1_err;
       pm_dddot];
+
+if (floor(t) - t) == 0
+    % fprintf('Current time: %d s\n',t)
+end
 
 end
 
