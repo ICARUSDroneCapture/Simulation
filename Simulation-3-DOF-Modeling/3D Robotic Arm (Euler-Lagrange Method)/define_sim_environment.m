@@ -2,7 +2,7 @@
 
 % Simulation time
 startTime = 0;
-finishTime = 60*2;
+finishTime = 30;
 tspan = [startTime finishTime]; % [s]
 
 finishCalibrationTime = 60; % seconds
@@ -34,7 +34,7 @@ period = 7.5;    % Expected period [s]
 period_small = 2; % Small period of 2 seconds for x/y translations
 period_big = 7.5; % Big period of 7.5 (maybe 10) seconds for z motion
 
-amp_small = 5;
+amp_small = 1;
 amp_big = 1;
 
 k = 1;

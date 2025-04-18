@@ -10,8 +10,15 @@ clear; clc; close all
 % constants
 constants;
 
+% Call simulation parameters
+simulationParameters
+
+% Define aspect of simualtion environment
+define_sim_environment
+
 % deck movement
 syms t
+syms y
 dx = 0*t; %[m]
 dy = 0*t; %[m]
 period = 7.5; %[s]
@@ -19,6 +26,9 @@ dz = 0.5*cos((2*pi/period)*t); %[m]
 
 d =[dx;dy;dz];
 d_ddot = diff(d,'t',2);
+
+% -------------------------- Inserting imu error --------------------------
+d_ddot_error = a.measured_accel_3D(a, d_ddot);
 
 % the deck rotations
 angle1 = 0*t; % deck rotation about its x-axis [rad]

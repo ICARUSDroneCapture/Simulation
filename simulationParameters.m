@@ -43,8 +43,8 @@ a.kd = 2;  % Derivative [Ns/m]
 a.ki = 0;  % Integral [N/ms]
 
 % Inertial Stabilization Control
-a.ka =  0.98;  % Acceleration Control [kg]
-a.kv = 4;  % Velocity Control [kg/s]
+a.ka =  0.2;  % Acceleration Control [kg]
+a.kv = 0;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2]
 
 % % Inertial Stabilization Control
@@ -120,11 +120,27 @@ if plot_gain
     grid on
 end
 
+% --------------------------- Mixing Functions ------------------------- %
+
+% Center gain scale (inertial isolation)
+a_c = -1 / abs(r_c - a.w/2)^n;
+k_c = 1;
+a.C = @(x) 1 .* (abs(x - d) <= r_c) ...
+       + (a_c*abs(x-(d+sign(x-d)*r_c)).^n + k_c) .* (abs(x - d) > r_c & ...
+       abs(x - d) <= a.w/2);
+
+% Boundary gain scale (relative position control)
+a_b = 1 / abs(r_b - a.w/2)^n;
+k_b = 0;
+a.B = @(x) (a_b*abs(x-(d+sign(x-d)*r_b)).^n + k_b) .* (abs(x - d) > r_b & ...
+       abs(x - d) <= a.w/2) ...
+       + 1 .* (abs(x - d) > a.w/2);
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%% Performance Parameters %%%%%%%%%%%%%%%%%%%
 
 % Maximum acceleration metric
-p_ddot_max = 0.005*beta^2;
+p_ddot_max = 0.005*beta^2;d
 
 % Settling time
 t_s = 2;
