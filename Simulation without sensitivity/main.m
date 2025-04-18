@@ -13,11 +13,10 @@ SimulationParameters;
 dt = 0.001; %[d]
 time_interval = [0 60]; %seconds
 
-initial_conditions = [0; 0; 0; 
-                       0; 0; 0]; %[q1; Dq1; int_q1_err; 
+initial_conditions = [0; 0; 0]; %[q1; Dq1; int_q1_err; 
                                   % pm_ddot];
 
-MFun = @(t, y)EOM_V3(t, y, a);
+MFun = @(t, y)EOM_V3_5(t, y, a);
 % tic
 % for i = 1:20
 [sol.x, sol.y]= rk4_solver(MFun,time_interval,initial_conditions, dt);
@@ -34,7 +33,7 @@ SimulationParameters;
 
 load('simResults.mat')
 
-m = 50;
+m = 1;
 x = sol.x(1:m:end);
 y = sol.y(1:m:end,:)';
 
@@ -80,7 +79,7 @@ fprintf('Average isolation: %0.2f%%\n', isolation*100);
 
 figure;
 
-subplot(3,1,1)
+subplot(2,1,1)
 plot(x, zEE)
 hold on
 plot(x, zNotIso)
@@ -89,34 +88,33 @@ ylabel('Vertical Position (m)')
 title('Inertial Position vs Time')
 legend('Isolated', 'Not Isolated')
 
-subplot(3,1,2)
-plot(x, y(6, :))
-hold on
+subplot(2,1,2)
 plot(x, y(1, :) - a.q1_ref)
+hold on
 plot(x, y(3, :))
 plot(x, y(2, :))
 hold off
 xlabel('Time (s)')
 ylabel('Control States')
 title('Control State Values vs Time')
-legend('p_{ddot}', 'q', 'q_{int}', 'q_{dot}')
+legend( 'q_{err}', 'q_{err\_int}', 'q_{dot}')
 
-torques = zeros(5, length(x));
-for i = 1:length(x)
-    taus = torqueValues(x(i), y(:, i), a);
-    torques(:, i) = taus;
-end
-
-subplot(3,1,3)
-hold on
-for i = 1:5
-    plot(x, torques(i, :))
-end
-hold off
-xlabel('Time (s)')
-ylabel('Toprque (Nm)')
-title('Torques vs Time')
-legend('K_a', 'K_p', 'K_i', 'K_d', 'Friction')
+% torques = zeros(5, length(x));
+% for i = 1:length(x)
+%     taus = torqueValues(x(i), y(:, i), a);
+%     torques(:, i) = taus;
+% end
+% 
+% subplot(3,1,3)
+% hold on
+% for i = 1:5
+%     plot(x, torques(i, :))
+% end
+% hold off
+% xlabel('Time (s)')
+% ylabel('Toprque (Nm)')
+% title('Torques vs Time')
+% legend('K_a', 'K_p', 'K_i', 'K_d', 'Friction')
 
 
 % Level of inertial and boundary control

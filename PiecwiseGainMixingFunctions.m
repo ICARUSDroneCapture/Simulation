@@ -24,14 +24,14 @@ end
 %% Gain Mixing
 
 % -------------------------- Parameters -------------------------------- %
-w = 90; % Range of inputs
+w = 1; % Range of inputs
 d = w/2; % Center of input region
 
 % Piecewise radii
-c = 0.8;
-r_c = 45*c; % Full isolation control radius
-b = 0.8;
-r_b = 45*b; % Zero relative position control radius
+c = 0.5;
+r_c = 0.5*c; % Full isolation control radius
+b = 0.5;
+r_b = 0.5*b; % Zero relative position control radius
 
 % Polynomial order
 n = 4;
@@ -72,15 +72,23 @@ cent_gain = C(theta); % Proportion of center control gain
 boundary_gain = B(theta); % Proportion of boundary control gain
 
 % figure;
-plot(theta, cent_gain)
+plot(theta, cent_gain, 'LineWidth', 1)
 hold on
-plot(theta, boundary_gain)
-xline(d,'--','Label','$x_{d}$','Interpreter','latex','FontSize',15,...
-    'LabelOrientation','horizontal','LabelVerticalAlignment','middle')
-title('Center and Boundary Control Mixing')
+text(d-0.02*w, 0, 'Boundary Control Scale', 'FontSize', 11, ...
+    'HorizontalAlignment', 'right', 'VerticalAlignment', 'top');
+plot(theta, boundary_gain, 'LineWidth', 1)
+text(d+0.02*w, 1, 'Inertial Control Scale', 'FontSize', 11, ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'bottom');
+xline(d,'--','Label',{'Desired'; 'Position'},...
+    'LabelHorizontalAlignment','right',...
+    'LabelVerticalAlignment','middle',...
+    'LabelOrientation','horizontal',...
+    'FontSize', 11, 'LineWidth', 1)
+title('Inertial Stability and Boundary Control Mixing')
 xlabel('Relative Position')
 ylabel('Gain Proportion')
 xlim([d - 1.1*w/2 d + 1.1*w/2])
 ylim([-0.1 1.1])
-% legend('Center','Boundary')
+% legend('Center Control Scale','Boundary Control Scale', 'Desired Position', ...
+%        'Location','eastoutside')
 grid on

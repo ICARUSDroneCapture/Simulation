@@ -87,13 +87,17 @@ p_ddot = [(-a.l1*sin(q1 + a.thetad(t))*(q1_ddot + a.thetad_ddot(t)) ...
 
 pm_dddot = a.omega*(p_ddot-pm_ddot);
 
+
+
 dS = [q1_dot;
       q1_ddot;
       q1_err;
       pm_dddot];
 
 if (floor(t) - t) == 0
-    % fprintf('Current time: %d s\n',t)
+    fprintf('Current time: %d s\n',t)
+    fprintf('Measured acceleration: %.3f m/s\n', pm_ddot(3))
+    fprintf('Real acceleration: %.3f m/s\n', p_ddot(3))
 end
 
 end

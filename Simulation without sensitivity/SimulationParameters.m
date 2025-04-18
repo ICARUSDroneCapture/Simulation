@@ -69,18 +69,18 @@ a.ka = 0;  % Acceleration Control [kg]
 
 % Relative Position Control at center
 scale = 1;
-a.kp_c = scale*0.1;  % Proportional [kg*s^-2]
-a.kd_c = scale*2;  % Derivative [kg/s]    
-a.ki_c = scale*0.025;  % Integral [kg*s^-3] 
+a.kp_c = scale*1;  % Proportional [kg*s^-2]
+a.kd_c = scale*5;  % Derivative [kg/s]    
+a.ki_c = scale*0.5;  % Integral [kg*s^-3] 
 
 % Relative Position Control at boundaries
-a.kp_b = 50;  % Proportional [kg*s^-2]
-a.kd_b = 10;  % Derivative [kg/s]    
-a.ki_b = 0.5;  % Integral [kg*s^-3]
+% a.kp_b = 50;  % Proportional [kg*s^-2]
+% a.kd_b = 10;  % Derivative [kg/s]    
+% a.ki_b = 0.5;  % Integral [kg*s^-3]
 
-% a.kp_b = 0;  % Proportional [kg*s^-2]
-% a.kd_b = 0;  % Derivative [kg/s]    
-% a.ki_b = 0;  % Integral [kg*s^-3]
+a.kp_b = 0;  % Proportional [kg*s^-2]
+a.kd_b = 0;  % Derivative [kg/s]    
+a.ki_b = 0;  % Integral [kg*s^-3]
 
 a.q1_ref = -pi/4;
 
@@ -89,9 +89,9 @@ a.w = pi; % Range of inputs
 d = a.q1_ref; % Center of input region
 
 % Piecewise radii
-c = 0.8;
+c = 0.5;
 r_c = 45*c; % Full isolation control radius
-b = 0.8;
+b = 0.5;
 r_b = 45*b; % Zero relative position control radius
 
 % Polynomial order

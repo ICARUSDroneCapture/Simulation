@@ -190,7 +190,7 @@ syms MU B N
 % important matrices
 
 % EOM
-% EOM = diff(j,'t')+M*diff(q1(t),'t',2)+M_dstar*diff(theta_D,'t',2)+(C+C_dstar-j_q)*diff(q1(t),'t')+(C_star-j_star_q)*diff(theta_D,'t')+MU*sign(diff(q1(t),'t'))+B*diff(q1(t),'t')+G == N*tau1(t);
+% EOM = diff(j,'t')+M*diff(q1(t),'t',2)+M_dstar*diff(theta_D,'t',2)+(C+C_dstar-j_q)*diff(q1(t),'t')+(C_star-j_star_q)*diff(theta_D,'t')+N*MU*sign(diff(q1(t),'t'))+N*B*diff(q1(t),'t')+G == N*tau1(t);
 EOM = diff(j,'t')+M*diff(q1(t),'t',2)+M_dstar*diff(theta_D,'t',2)+(C+C_dstar-j_q)*diff(q1(t),'t')+(C_star-j_star_q)*diff(theta_D,'t')+G == N*tau1(t);
 
 % substituting deck rotations in EOM
