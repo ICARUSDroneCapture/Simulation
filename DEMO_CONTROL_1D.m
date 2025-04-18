@@ -16,7 +16,7 @@ fprintf("\nTime: ")
 % Initial States
 
 % Initial States
-p0 =  a.real_pos_zI(tspan(1))+a.pr_d;             % Platform position [m]
+p0 =  hdeck + a.pr_d;             % Platform position [m]
 p_dot0 = 0;             % Platform velocity [m/s]
 pr_err_accum0 = 0;                      % Integral of relative position error [m*s]
 pm0 = p0;                               % Platform integrated position [m]
@@ -29,7 +29,7 @@ s0 = [p0 p_dot0 pr_err_accum0 pm0 pm_dot pm_ddot];
 
 control_dynamics = @(t, state) NoError_FixedInt(t, a, state);
 
-[t_control, sol_control]= rk4_solver(control_dynamics, tspan, s0, dt);
+[~, sol_control]= rk4_solver(control_dynamics, tspan, s0, dt);
 
 
 fprintf('\nFinished Integration with NO Sensor Error.\n')
@@ -42,9 +42,10 @@ fprintf("\nTime: ")
 % Running simulation with sensor error
 
 s0 = [p0 p_dot0 pr_err_accum0 pm0 pm_dot pm_ddot p_theta0 p_theta_err_accum0];
-control_dynamics_err = @(t, state) rigidArmControl_1D(t, a, state);
 
-[t_error, sol_error]= rk4_solver(control_dynamics_err, tspan, s0, dt);
+control_dynamics_err = @(t, state) rigidArmControl_1D(t, a, state, finishCalibrationTime);
+
+[~, sol_error]= rk4_solver(control_dynamics_err, tspan, s0, dt);
 
 % Get platform position in inertial frame, with deck as reference zero
 plat_pos = sol_error(:,1);
@@ -54,13 +55,13 @@ fprintf('\nFinished Integration WITH Sensor Error.\n')
 % %% Plotting other states
 % 
 % figure
-% plot(t_error, sol_error(:, 1))
+% plot(t, sol_error(:, 1))
 % xlabel('Time (sec)')
 % ylabel('Velocity (m/s)')
 % title('Platform Inertial Velocity')
 % 
 % figure
-% plot(t_error, sol_error(:, 2))
+% plot(t, sol_error(:, 2))
 % xlabel('Time (sec)')
 % ylabel('Angle (rad)')
 % title('Platform Angle')
@@ -68,17 +69,17 @@ fprintf('\nFinished Integration WITH Sensor Error.\n')
 %% Plotting Platform Position
 
 figure;
-plot(t_control, sol_control(:,1))
+plot(t, sol_control(:,1))
 hold on
-plot(t_error, plat_pos)
+plot(t, plat_pos)
 hold on
-plot(t,a.d(t))
+plot(t,a.real_pos_zI(t))
 hold on
-plot(t, a.d(t)+1)
+plot(t, a.real_pos_zI(t)+1)
 hold on
-plot(t, a.d(t)+0.09, '--')
+plot(t, a.real_pos_zI(t)+0.09, '--')
 hold on
-plot(t, a.d(t)+0.5+0.41, '--')
+plot(t, a.real_pos_zI(t)+0.5+0.41, '--')
 title('Platform Inertial Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
@@ -89,9 +90,9 @@ legend('Fixed-Step (without sensor error) Integration', 'Fixed-Step (with sensor
 %% Plotting Platform Angle
 
 figure;
-plot(t_error, 180/pi*a.real_ang(t))
+plot(t, 180/pi*a.phi(t))
 hold on
-plot(t_error, 180/pi*sol_error(:,7))
+plot(t, 180/pi*sol_error(:,7))
 title('Platform Angle vs Time')
 xlabel('Time (s)')
 ylabel('Angle (deg)')
@@ -100,10 +101,10 @@ legend('Fixed-Step (without sensor error) Integration', 'Fixed-Step (with sensor
 %% Plotting Platform Acceleration
 
 figure;
-plot(t, a.real_accel(t))
+plot(t, sol_control(:, 6))
 hold on
-plot(t, sol_error(:,6))
-% ylim([-0.01 0.01])
+plot(t, sol_error(:, 6))
+ylim([-1 1])
 title('Platform Inertial Acceleration vs Time')
 xlabel('Time (s)')
 ylabel('Acceleration (m/s^2)')
@@ -118,7 +119,7 @@ sz = 2;
 plot_scale = 0.001;
 
 figure
-scatter(t_error, pos_err*100, sz, 'filled', displayName="Positional Error")
+scatter(t, pos_err*100, sz, 'filled', displayName="Positional Error")
 % hold on
 % plot(t,a.d(t)/200, displayName="Deck Disturbance")
 % hold on
@@ -138,7 +139,7 @@ plot_scale = 0.00001;
 growth = diff(pos_err);
 
 % figure
-% scatter(t_error(2:end), growth*100, sz, 'filled', displayName="Positional Error")
+% scatter(t(2:end), growth*100, sz, 'filled', displayName="Positional Error")
 % hold on
 % plot(t,plot_scale*a.d(t))
 % hold on

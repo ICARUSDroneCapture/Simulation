@@ -5,6 +5,8 @@ startTime = 0;
 finishTime = 60*2;
 tspan = [startTime finishTime]; % [s]
 
+finishCalibrationTime = 60; % seconds
+
 % dt = 1/imu_rate;  % [s]
 dt = 0.0001;
 a.dt = dt;
@@ -19,7 +21,7 @@ defineSignals
 
 %% Environment Parameters
 
-alpha = 0.2; % wave amplitdue [m]
+alpha = 0.45; % wave amplitdue [m]
 hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
 
 % Wave frequency
@@ -32,7 +34,7 @@ period_small = 2; % Small period of 2 seconds for x/y translations
 period_big = 7.5; % Big period of 7.5 (maybe 10) seconds for z motion
 
 amp_small = 5;
-amp_big = 1;
+amp_big = 1.2;
 
 k = 1;
 T = period / k;  % Period of deck disturbance [s]

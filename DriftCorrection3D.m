@@ -4,12 +4,15 @@ function s_dot = DriftCorrection3D(a, state, signals)
     vel_x = state(1);
     vel_y = state(2);
     vel_z = state(3);
+
     theta = state(4);
     psi = state(5);
     phi = state(6);
+
     vel_err_accum_x = state(7);
     vel_err_accum_y = state(8);
     vel_err_accum_z = state(9);
+    
     theta_err_accum = state(10);
     psi_err_accum = state(11);
     phi_err_accum = state(12);

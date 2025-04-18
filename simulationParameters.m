@@ -26,14 +26,25 @@ plot_gain = false;
 % a.kv = 5000;  % Velocity Control [kg/s]
 % a.ks = 0;  % Position Control [kg*s^-2]
 
+% % Relative Position Control
+% a.kp = 1.2;  % Proportional [N/m]
+% a.kd = 0.4;  % Derivative [Ns/m]    
+% a.ki = 0;  % Integral [N/ms]
+% 
+% % % Inertial Stabilization Control
+% a.ka =  1.2;  % Acceleration Control [kg]
+% a.kv = 12;  % Velocity Control [kg/s]
+% a.ks = 0;  % Position Control [kg*s^-2]
+
+
 % Relative Position Control
-a.kp = 1.2;  % Proportional [N/m]
-a.kd = 0.4;  % Derivative [Ns/m]    
+a.kp = 10;  % Proportional [N/m]
+a.kd = 2;  % Derivative [Ns/m]    
 a.ki = 0;  % Integral [N/ms]
 
-% % Inertial Stabilization Control
-a.ka =  3.4;  % Acceleration Control [kg]
-a.kv = 12;  % Velocity Control [kg/s]
+% Inertial Stabilization Control
+a.ka =  0.98;  % Acceleration Control [kg]
+a.kv = 4;  % Velocity Control [kg/s]
 a.ks = 0;  % Position Control [kg*s^-2]
 
 % % Inertial Stabilization Control

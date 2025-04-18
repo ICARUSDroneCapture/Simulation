@@ -173,12 +173,12 @@ measured_gyro = a.measured_gyro(t, a.o_d_n_g_c, a.biasStabDistGyro, a.biasTempDi
 %% Running ODE Simulations
 
 % Initial States
-p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
+p0 =  a.real_pos(tspan(1))+a.pr_d;   % Platform position [m]
 p_dot0 = 0;   % Platform velocity [m/s]
 pr_err_accum0 = 0;            % Integral of relative position error [m*s]
 pm0 = p0;                     % Platform inetegrated position [m]
 pm_dot = p_dot0;              % Platform integrated velocity [m/s]
-pm_ddot = a.d_ddot(tspan(1)); % Platform measured acceleration [m*s^-2]
+pm_ddot = a.real_accel(tspan(1)); % Platform measured acceleration [m*s^-2]
 p_theta0 = a.real_ang(tspan(1)); % Platform inertial angle [deg]
 
 % --------------------- Running no error simulation -----------------------
@@ -202,13 +202,13 @@ end
 figure;
 plot(t_ode_control, s_ode_control(:,1))
 hold on
-plot(t,a.d(t))
+plot(t,a.real_pos(t))
 hold on
-plot(t, a.d(t)+1)
+plot(t, a.real_pos(t)+1)
 hold on
-plot(t, a.d(t)+0.09, '--')
+plot(t, a.real_pos(t)+0.09, '--')
 hold on
-plot(t, a.d(t)+0.5+0.41, '--')
+plot(t, a.real_pos(t)+0.5+0.41, '--')
 title('Platform Inertial Position vs Time')
 xlabel('Time (s)')
 ylabel('Position (m)')
@@ -293,7 +293,7 @@ sz = 2;
 figure
 scatter(t_precise, pos_err*100, sz, 'filled', displayName="Positional Error")
 hold on
-plot(t,a.d(t)/200, displayName="Deck Disturbance")
+plot(t,a.real_pos(t)/200, displayName="Deck Disturbance")
 title('Worst Case Relative Position Error vs Time')
 xlabel('Time (s)')
 ylabel('Error (cm)')
@@ -304,7 +304,7 @@ growth = diff(pos_err);
 figure
 scatter(t_precise(2:end), growth*100, sz, 'filled', displayName="Positional Error")
 hold on
-plot(t,a.d(t)/200, displayName="Deck Disturbance")
+plot(t,a.real_pos(t)/200, displayName="Deck Disturbance")
 title('Error Growth over Time')
 xlabel('Time (s)')
 ylabel('Error (cm)')

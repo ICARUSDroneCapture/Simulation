@@ -21,17 +21,17 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     
     % Current states
 
-    p_x = prev_state(1);
-    p_y = prev_state(2);
-    p_z = prev_state(3);
+    pi_x = prev_state(1);
+    pi_y = prev_state(2);
+    pi_z = prev_state(3);
 
     p_dot_x = prev_state(4);
     p_dot_y = prev_state(5);
     p_dot_z = prev_state(6);
 
-    pr_err_accum_x = prev_state(7);
-    pr_err_accum_y = prev_state(8);
-    pr_err_accum_z = prev_state(9);
+    p_err_accum_x = prev_state(7);
+    p_err_accum_y = prev_state(8);
+    p_err_accum_z = prev_state(9);
 
     pm_x = prev_state(10);
     pm_y = prev_state(11);
@@ -53,11 +53,9 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     p_phi_err_accum = prev_state(23);
     p_psi_err_accum = prev_state(24);
 
-    specs = a.specs;
-
-    p = [p_x; p_y; p_z];
+    pi = [pi_x; pi_y; pi_z];
     p_dot = [p_dot_x; p_dot_y; p_dot_z];
-    pr_err_accum = [pr_err_accum_x; pr_err_accum_y; pr_err_accum_z];
+    p_err_accum = [p_err_accum_x; p_err_accum_y; p_err_accum_z];
 
     pm = [pm_x; pm_y; pm_z];
     pm_dot = [pm_dot_x; pm_dot_y; pm_dot_z];
@@ -67,10 +65,12 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     p_theta_err_accum = [p_theta_err_accum; p_phi_err_accum; p_psi_err_accum];
 
     % ------------------------- Check Reference Frames --------------------
+    
+    real_pos = [a.real_pos_xI(t); a.real_pos_yI(t); a.real_pos_zI(t)];
 
     % Error in relative position (distance to center of operation region)
-    pr = pm-a.real_pos_zI(t);
-    pr_err = pr-a.pr_d;
+    p = pi-real_pos;
+    p_err = p-a.pr_d;
     
     % ----------------- Inserting measured accel manually -----------------
 
@@ -80,67 +80,56 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     psi_real = a.psi(t);
     
     % Get REAL inertial acceleration (this has g in it)
-    a_I = [a.real_accel_xI(t); a.real_accel_yI(t); a.real_accel_zI(t)];
-    
-    % Rotate inertial acceleration to sensor frame base on real angle/acceleration
-    a_S = Rotate_I_S(a_I, theta_real, phi_real, psi_real);
-
-    % Add sensor error to acceleration measurements
-    accel_S = a.measured_accel_3D(a, t, a_S);
-    % accel_S = a_S;
+    accel_S = a.measured_accel_3D(a, t, pm_ddot);
 
     % Get REAL angular velocity
-    angle_d = [a.theta_dot(t); a.phi_dot(t); a.psi_dot(t)];
-
+    ang_rate_i = [a.theta_dot(t); a.phi_dot(t); a.psi_dot(t)];
+    
     % Add sensor error to gyroscope measurements
-    gyro = a.measured_gyro_3D(a, t, angle_d);
-    % gyro = angle_d;
+    gyro_m = a.measured_gyro_3D(a, t, ang_rate_i);
+
+    % Rotate inertial acceleration to sensor frame base on real angle/acceleration
+    a_S = Rotate_I_S(accel_S, theta_real, phi_real, psi_real);
+
+    theta_use = p_theta(1);
+    phi_use = p_theta(2);
+    psi_use = p_theta(3);
 
     % Rotate realistic sensor acceleration measurements back to inertial
     % frame (still has g), using our INTEGRATED angle (has integration error)
-    accel_I = Rotate_S_I(accel_S, theta_real, phi_real, psi_real);
-    % accel_I = Rotate_S_I(accel_S, theta_real, phi_real, psi_real);
-    % accel_I = a_I;
-
-    % Simply remove g from inertial z vector
-    % g is positive in simulation parameters. When measured it would be
-    % negative though, hence why we add it here
-    accel_I = [accel_I(1) accel_I(2) accel_I(3)+a.g];
+    accel_I = Rotate_S_I(a_S, theta_use, phi_use, psi_use);
 
     % Assign our acceleration and gyroscope measurements, with gravity
     % removed, to our vector for sensor error correction
-    measured_state = [accel_I, gyro'];
+    measured_state = [accel_I; gyro_m]';
 
     % Compensate for constant error values
-    corrected_state = compensateError(measured_state, specs, t);
+    corrected_state = compensateError(measured_state, a.specs, t);
 
-    int_state = [-p_dot; p_theta; pr_err; p_theta_err_accum];
-    
     % input: [velocity; theta; position; theta_err_accum]
     % output: [accel; theta_dot; vel; theta]
-    state_control = DriftCorrection(a, int_state, corrected_state);
+    int_state = [pm_dot; p_theta; pm; p_theta_err_accum];
+    state_control = DriftCorrection3D(a, int_state, corrected_state);
 
     pm_ddot = state_control(1:3);
-    p_thetadot = state_control(4:6);
+    p_theta_dot = state_control(4:6);
 
     pm_dot = state_control(7:9);
-    p_theta_err = state_control(10:12);
+    p_theta_err = state_control(12:12);
     
     % ---------------------------------------------------------------------
     
     % Control gain proportions
     
-    I = a.I(pr); % Proportion of inertial stability control to apply
-    % I = 0.5;
-    
+    I = a.I(p); % Proportion of inertial stability control to apply
+
     ka = a.ka*I; % Acceleration [kg]
     kv = a.kv*I; % Velocity     [kg/s]
     ks = a.ks*I; % Position     [kg*s^-2]
     
-    k = a.K(pr);     % Proportion of relative position control to apply
-    k_h = a.K_h(pr);
-    % k_h =  0.5;
-    
+    % k = a.K(p);     % Proportion of relative position control to apply
+    k_h = a.K_h(p);     % Proportion of relative position control to apply
+
     kp = a.kp*k_h;     % Proportional [kg*s^-2]
     kd = a.kd*k_h;     % Derivative   [kg/s]
     ki = a.ki*k_h;     % Integral     [kg*s^-3]
@@ -156,11 +145,9 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     
     % Inertial stability control force
     c_i = a.initial_scale(t); % Initial scale of gains
-    % c_i = 1;
-    f_i = -(ka.*pm_ddot + kv.*pm_dot + ks.*pm).*c_i;
-    % f_i = 0.1
+    f_i = -(ka.*pm_ddot + kv.*pm_dot + ks.*pm)*c_i;
     % Relative position control force
-    f_pr = -(kp.*pr_err + ki.*pr_err_accum + kd.*(pm_dot-a.real_vel_zI(t)));
+    f_pr = -(kp.*p_err + ki.*p_err_accum + kd.*(pm_dot-a.real_vel_zI(t)));
     
     % Platform EOM
     p_ddot = (f_i+f_pr) / a.m;
@@ -173,10 +160,10 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     state_dot(16:18) = a.omega*(p_ddot - pm_ddot);
     
     % Error in relative position
-    state_dot(7:9) = pr_err;
+    state_dot(7:9) = p_err;
     
     % Derivative of angle
-    state_dot(19:21) = p_thetadot; % Angular Rate
+    state_dot(19:21) = p_theta_dot; % Angular Rate
     
     % Theta error
     state_dot(22:24) = p_theta_err;

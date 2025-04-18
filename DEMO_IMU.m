@@ -11,10 +11,13 @@ simulationParameters
 %% Sensor Frame Accelerations
 
 a_I_over_time = [a.real_accel_xI(t), a.real_accel_yI(t), a.real_accel_zI(t)];
+omega_over_time = [a.theta_dot(t), a.phi_dot(t), a.psi_dot(t)];
 
 theta_over_time = a.theta(t);
 phi_over_time = a.phi(t);
 psi_over_time = a.psi(t);
+
+angles_over_time = [theta_over_time, phi_over_time, psi_over_time];
 
 a_S_true = zeros(length(t), 3);
 a_S_measured = zeros(length(t), 3);
@@ -259,12 +262,10 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 
 %% Control Law Drift Compensation
 
-finishCalibrationTime = 60; % seconds
-
 fprintf('\nStarting Integration WITH Sensor Compensation Control Law.')
 fprintf("\nTime: ")
 
-control_dynamics = @(t_i, state) IMUDriftCorrection(t_i, a, state, finishCalibrationTime);
+control_dynamics = @(t_i, state) IMUDriftCorrection(t_i, a, state, finishCalibrationTime, a_I_over_time, omega_over_time, angles_over_time);
 
 vel0_x = 0;
 vel0_y = 0;
@@ -442,7 +443,7 @@ title('Controlled Measured Angular Velocity Psi')
 
 %% Functions
 
-function s_dot = IMUDriftCorrection(time_i, a, prev_state, finishCalibrationTime)
+function s_dot = IMUDriftCorrection(time_i, a, prev_state, finishCalibrationTime, a_I_over_time, omega_over_time, angles_over_time)
 
     % Current states
     vel_x = prev_state(1);
@@ -473,20 +474,27 @@ function s_dot = IMUDriftCorrection(time_i, a, prev_state, finishCalibrationTime
     state_dot_0 = 0;
     
     % Get real inertial accelerations
-    a_I = [a.real_accel_xI(time_i); a.real_accel_yI(time_i); a.real_accel_zI(time_i)];
-    ang_rate_i = [a.theta_dot(time_i); a.phi_dot(time_i); a.psi_dot(time_i)];
+    % a_I = [a.real_accel_xI(time_i); a.real_accel_yI(time_i); a.real_accel_zI(time_i)];
+    % ang_rate_i = [a.theta_dot(time_i); a.phi_dot(time_i); a.psi_dot(time_i)];
+
+    a_I = a_I_over_time(floor(time_i./a.dt)+1, :)';
+    ang_rate_i = omega_over_time(floor(time_i./a.dt)+1, :)';
     
     % Get real angles
-    theta_real = a.theta(time_i);
-    phi_real = a.phi(time_i);
-    psi_real = a.psi(time_i);
+    angles_i = angles_over_time(floor(time_i./a.dt)+1, :);
+
+    theta_real = angles_i(1);
+    phi_real = angles_i(2);
+    psi_real = angles_i(3);
 
     % Get real sensor frame accelerations
-    a_S = Rotate_I_S(a_I, phi_real, theta_real, psi_real);
+    a_S = Rotate_I_S(a_I, psi_real, theta_real, phi_real);
     
     accel_m = a.measured_accel_3D(a, time_i, a_S);
-
     gyro_m = a.measured_gyro_3D(a, time_i, ang_rate_i);
+
+    % accel_m = a_S;
+    % gyro_m = ang_rate_i;
 
     theta_use = theta_real;
     phi_use = phi_real;
@@ -498,7 +506,7 @@ function s_dot = IMUDriftCorrection(time_i, a, prev_state, finishCalibrationTime
         psi_use = angle_psi;
     end
     
-    accel_I = Rotate_S_I(accel_m, phi_use, psi_use, theta_use);
+    accel_I = Rotate_S_I(accel_m, psi_use, theta_use, phi_use);
 
     accel_state = [accel_I(1) accel_I(2) accel_I(3)+a.g];
 

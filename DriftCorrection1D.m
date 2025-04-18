@@ -9,14 +9,14 @@ function s_dot = DriftCorrection1D(a, state, signals)
     curr_state = [vel; theta];
     state_err_accum = [p; theta_err_accum];
 
-    kw = a.kw;
-    kt = a.kt;
+    kw = a.kw(3);
+    kt = a.kt(5);
 
     state_0 = [0; 0];
     state_dot_0 = [0; 0];
 
-    accel_dot_m_v = signals(1);
-    gyro_dot_m = signals(2);
+    accel_dot_m_v = signals(3);
+    gyro_dot_m = signals(5);
 
     state_dot_m = [accel_dot_m_v; gyro_dot_m];
 

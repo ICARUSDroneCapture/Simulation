@@ -13,17 +13,10 @@ simulationParameters
 fprintf('\nStarting Integration with NO Sensor Error.')
 fprintf("\nTime: ")
 
-% % Initial States
-% p0 =  a.d(tspan(1))+a.pr_d;   % Platform position [m]
-% p_dot0 = 0;   % Platform velocity [m/s]
-% pr_err_accum0 = 0;            % Integral of relative position error [m*s]
-% pm0 = p0;                     % Platform inetegrated position [m]
-% pm_dot = p_dot0;              % Platform integrated velocity [m/s]
-% pm_ddot = a.d_ddot(tspan(1)); % Platform measured acceleration [m*s^-2]
-% p_theta0 = a.real_ang(tspan(1)); % Platform inertial angle [deg]
+% Initial States
 
 % Initial States
-p0 =  a.real_pos_zI(tspan(1)) + a.pr_d;             % Platform position [m]
+p0 =  hdeck + a.pr_d;             % Platform position [m]
 p_dot0 = 0;             % Platform velocity [m/s]
 pr_err_accum0 = 0;                      % Integral of relative position error [m*s]
 pm0 = p0;                               % Platform integrated position [m]
@@ -50,7 +43,7 @@ fprintf("\nTime: ")
 
 p0_x = 0;
 p0_y = 0;
-p0_z = a.real_pos_zI(tspan(1)) + a.pr_d;
+p0_z = hdeck + a.pr_d;
 p0 = [p0_x p0_y p0_z];
 
 p_dot0_x = 0;
@@ -63,15 +56,9 @@ pr_err_accum0_y = 0;
 pr_err_accum0_z = 0;
 pr_err_accum0 = [pr_err_accum0_x pr_err_accum0_y pr_err_accum0_z];
 
-pm0_x = 0;
-pm0_y = 0;
-pm0_z = 0;
-pm0 = [pm0_x pm0_y pm0_z];
+pm0 = p0;
 
-pm_dot_x = 0;
-pm_dot_y = 0;
-pm_dot_z = 0;
-pm_dot = [pm_dot_x pm_dot_y pm_dot_z];
+pm_dot = p_dot0;
 
 pm_ddot_x = 0;
 pm_ddot_y = 0;
@@ -117,8 +104,8 @@ fprintf('\nFinished Integration WITH Sensor Error.\n')
 figure;
 plot(t, sol_control(:,1))
 hold on
-% plot(t, plat_pos)
-% hold on
+plot(t, plat_pos)
+hold on
 plot(t,a.real_pos_zI(t))
 hold on
 plot(t, a.real_pos_zI(t)+1)
@@ -137,9 +124,9 @@ legend('Fixed-Step (without sensor error) Integration', 'Fixed-Step (with sensor
 %% Plotting Platform Angle
 
 figure;
-plot(t, 180/pi*a.theta(t))
+plot(t, 180/pi*a.phi(t))
 hold on
-plot(t, 180/pi*sol_error(:,19))
+plot(t, 180/pi*sol_error(:,20))
 title('Platform Angle vs Time')
 xlabel('Time (s)')
 ylabel('Angle (deg)')
@@ -148,7 +135,7 @@ legend('Fixed-Step (without sensor error) Integration', 'Fixed-Step (with sensor
 %% Plotting Platform Acceleration
 
 figure;
-plot(t, a.real_accel_zI(t))
+plot(t, sol_control(:, 6))
 hold on
 plot(t, sol_error(:,18))
 % ylim([-0.01 0.01])
@@ -160,7 +147,7 @@ legend('Deck Disturbance', 'Corrected Acceleration')
 
 %% Getting and Plotting error
 
-pos_err = plat_pos - sol_control(:, 3);
+pos_err = plat_pos - sol_control(:, 1);
 
 sz = 2;
 plot_scale = 0.001;

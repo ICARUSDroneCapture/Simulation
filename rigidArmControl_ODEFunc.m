@@ -85,7 +85,7 @@ function s_dot = rigidArmControl_ODEFunc(t, s, a)
     % ----------------------------------------------------------------------------------------------
     
     % Error in relative position (distance to center of operation region)
-    pr = pm-a.d(t);
+    pr = pm-a.real_pos(t);
     pr_err = pr-a.pr_d;
     
     % For testing gains without mixing proportions
@@ -126,7 +126,7 @@ function s_dot = rigidArmControl_ODEFunc(t, s, a)
     c_i = a.initial_scale(t); % Initial scale of gains
     f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
     % Relative position control force
-    f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(pm_dot-a.d_dot(t)));
+    f_pr = -(kp*pr_err + ki*pr_err_accum + kd*(pm_dot-a.real_vel(t)));
     
     % Platform EOM
     p_ddot = (f_i+f_pr) / a.m;
