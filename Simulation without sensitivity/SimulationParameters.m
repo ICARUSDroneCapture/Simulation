@@ -65,22 +65,22 @@ a.thetad_dot = @(t) (pi^2*sin((2*pi*t)/period))/(2*period);
 a.thetad_ddot = @(t) (pi^3*cos((2*pi*t)/period))/period^2;
 
 % Inertial Stabilization Control
-a.ka = 0;  % Acceleration Control [kg]
+a.ka = 100;  % Acceleration Control [kg]
 
 % Relative Position Control at center
 scale = 1;
-a.kp_c = scale*1;  % Proportional [kg*s^-2]
+a.kp_c = scale*0.2;  % Proportional [kg*s^-2]
 a.kd_c = scale*5;  % Derivative [kg/s]    
-a.ki_c = scale*0.5;  % Integral [kg*s^-3] 
+a.ki_c = scale*0.1;  % Integral [kg*s^-3] 
 
 % Relative Position Control at boundaries
-% a.kp_b = 50;  % Proportional [kg*s^-2]
-% a.kd_b = 10;  % Derivative [kg/s]    
-% a.ki_b = 0.5;  % Integral [kg*s^-3]
+a.kp_b = 50;  % Proportional [kg*s^-2]
+a.kd_b = 10;  % Derivative [kg/s]    
+a.ki_b = 0.5;  % Integral [kg*s^-3]
 
-a.kp_b = 0;  % Proportional [kg*s^-2]
-a.kd_b = 0;  % Derivative [kg/s]    
-a.ki_b = 0;  % Integral [kg*s^-3]
+% a.kp_b = 0;  % Proportional [kg*s^-2]
+% a.kd_b = 0;  % Derivative [kg/s]    
+% a.ki_b = 0;  % Integral [kg*s^-3]
 
 a.q1_ref = -pi/4;
 
@@ -90,9 +90,9 @@ d = a.q1_ref; % Center of input region
 
 % Piecewise radii
 c = 0.5;
-r_c = 45*c; % Full isolation control radius
+r_c = a.w/2*c; % Full isolation control radius
 b = 0.5;
-r_b = 45*b; % Zero relative position control radius
+r_b = a.w/2*b; % Zero relative position control radius
 
 % Polynomial order
 n = 4;

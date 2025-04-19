@@ -11,7 +11,7 @@ SimulationParameters;
 
 % solving the system
 dt = 0.001; %[d]
-time_interval = [0 60]; %seconds
+time_interval = [0 120]; %seconds
 
 initial_conditions = [0; 0; 0]; %[q1; Dq1; int_q1_err; 
                                   % pm_ddot];

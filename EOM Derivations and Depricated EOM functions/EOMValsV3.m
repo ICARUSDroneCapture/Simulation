@@ -47,27 +47,27 @@ Dq1_init = 0;
 % ref_q1 = -pi/4;
 % 
 syms l1
-% % forward kinematics
+% forward kinematics
 r_I = [l1*cos(q1(t)+theta2(t));0;-l1*sin(q1(t)+theta2(t))];
-% 
-% % the jocabain
-% J = [-l1*sin(q1(t));0;-l1*cos(q1(t))];
-% 
-% % inertial acceleration
+
+% the jocabain
+J = [-l1*sin(q1(t));0;-l1*cos(q1(t))];
+
+% inertial acceleration
 p = d+r_I;
 p_ddot = diff(p,'t',2);
 p_ddot = simplify(p_ddot);
-% 
-% R_I_B = [cos(theta2(t)) 0 -sin(theta2(t));
-%         0 1 0;
-%         sin(theta2(t)) 0 cos(theta2(t))];
+
+R_I_B = [cos(theta2(t)) 0 -sin(theta2(t));
+        0 1 0;
+        sin(theta2(t)) 0 cos(theta2(t))];
 % % p_ddot_B = R_I_B*p_ddot;
 % 
-% syms ka tau_c
-% % gains of inertial stability control (cartesian)
-% Ka = [0 0 0;
-%       0 0 0; 
-%       0 0 ka];
+syms ka tau_c
+% gains of inertial stability control (cartesian)
+Ka = [0 0 0;
+      0 0 0; 
+      0 0 ka];
 % Kv = [0 0 0; 
 %       0 0 0; 
 %       0 0 375*1];
@@ -79,11 +79,11 @@ p_ddot = simplify(p_ddot);
 % 
 % F_control = - R_I_B*(Ka*p_ddot + Kv*int(p_ddot));
 % 
-% F_control = - R_I_B*Ka*p_ddot;
+F_control = - R_I_B*Ka*p_ddot;
 % 
-% tau = J.'*F_control ;
+tau = J.'*F_control ;
 % 
-% tau1(t) =  tau_c+tau(1);
+tau1(t) =  tau_c+tau(1);
 %-------------------------------------------------------------------------%
 
 % defining the rotation matrices
