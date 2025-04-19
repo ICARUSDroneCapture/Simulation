@@ -63,7 +63,7 @@ zNotIso = B(3) - a.l1*sin(a.q1_ref+theta2_eval);
 t_eval = x(end)*0.5;
 t_idx = (x > t_eval);
 
-isolation = calculateIsolationEnergy(zEE(t_idx), zNotIso(t_idx));
+isolation = calculateIsolationFFT(zEE(t_idx), zNotIso(t_idx));
 fprintf('Average isolation: %0.2f%%\n', isolation*100);
 
 % figure()

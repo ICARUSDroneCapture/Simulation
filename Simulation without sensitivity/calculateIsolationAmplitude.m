@@ -1,4 +1,4 @@
-function isolationPercent = calculateIsolationEnergy(iso, nonIso)
+function isolationPercent = calculateIsolationAmplitude(iso, nonIso)
     % Calculates the percent of original signal energy retained in the controlled signal.
     % 0% = full isolation (iso is 0), 100% = no isolation (iso == nonIso)
 
@@ -14,6 +14,6 @@ function isolationPercent = calculateIsolationEnergy(iso, nonIso)
     energyIso = sum(iso.^2);
     energyNonIso = sum(nonIso.^2);
 
-    % Ratio of energies
-    isolationPercent = energyIso / energyNonIso;  % 1 = no isolation
+    % Ratio of amplitudes
+    isolationPercent = sqrt(energyIso / energyNonIso);  % 1 = no isolation
 end

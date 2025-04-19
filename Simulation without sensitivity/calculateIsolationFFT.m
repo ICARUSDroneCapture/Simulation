@@ -16,5 +16,5 @@ function isolationPercent = calculateIsolationFFT(iso, nonIso)
     fftNonIso = fftNonIso(1:floor(N/2)+1);
 
     % Energy ratio
-    isolationPercent = sum(fftIso) / sum(fftNonIso);  % 1 = no isolation
+    isolationPercent = sqrt(sum(fftIso) / sum(fftNonIso));  % 1 = no isolation
 end

@@ -23,7 +23,7 @@ function [t, y] = rk4_solver(dynamics, tspan, y0, dt)
     for i = 1:(num_steps-1)
         ti = t(i);       % Current time
         if (floor(ti) - ti) == 0
-            fprintf('Current time: %d s\n',ti)
+            % fprintf('Current time: %d s\n',ti)
         end
         yi = y(i, :)';   % Current solution (as a column vector)
         
