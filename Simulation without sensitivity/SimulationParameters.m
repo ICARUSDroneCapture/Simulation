@@ -64,14 +64,18 @@ a.thetad = @(t) (pi*sin((pi*t)/period).^2)/2;
 a.thetad_dot = @(t) (pi^2*sin((2*pi*t)/period))/(2*period);
 a.thetad_ddot = @(t) (pi^3*cos((2*pi*t)/period))/period^2;
 
+% a.thetad = @(t) pi/4 + 0*t;
+% a.thetad_dot = @(t) 0*t;
+% a.thetad_ddot = @(t) 0*t;
+
 % Inertial Stabilization Control
-a.ka = 100;  % Acceleration Control [kg]
+a.ka = 160;  % Acceleration Control [kg]
 
 % Relative Position Control at center
 scale = 1;
-a.kp_c = scale*0.2;  % Proportional [kg*s^-2]
-a.kd_c = scale*5;  % Derivative [kg/s]    
-a.ki_c = scale*0.1;  % Integral [kg*s^-3] 
+a.kp_c = scale*0.3;  % Proportional [kg*s^-2]
+a.kd_c = scale*6;  % Derivative [kg/s]    
+a.ki_c = scale*0.12;  % Integral [kg*s^-3] 
 
 % Relative Position Control at boundaries
 a.kp_b = 50;  % Proportional [kg*s^-2]

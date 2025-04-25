@@ -33,7 +33,7 @@ SimulationParameters;
 
 load('simResults.mat')
 
-m = 1;
+m = 10;
 x = sol.x(1:m:end);
 y = sol.y(1:m:end,:)';
 
@@ -57,6 +57,10 @@ theta2_eval = a.thetad(x);
 
 xEE = B(1) + a.l1*cos(y(1,:)+theta2_eval);
 zEE = B(3) - a.l1*sin(y(1,:)+theta2_eval);
+
+% save('video1SimData','zEE','x')
+% save('video2SimData','zEE','x')
+% save('video5SimData','zEE','x')
 
 xNotIso = B(1) + a.l1*cos(a.q1_ref+theta2_eval);
 zNotIso = B(3) - a.l1*sin(a.q1_ref+theta2_eval);
