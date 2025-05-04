@@ -44,7 +44,7 @@ function state_dot = NoError_FixedInt(t, a, prev_state)
     % ki = a.ki; % Integral     [kg*s^-3]
     
     % Control gain proportions
-    a.q1_ref_z = a.hdeck + a.pr_d(3);
+    a.q1_ref_z = a.pr_d(3);
 
     d_z = a.q1_ref_z; % Center of input region
 

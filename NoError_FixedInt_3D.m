@@ -80,7 +80,7 @@ function state_dot = NoError_FixedInt_3D(t, a, prev_state)
     
     a.q1_ref_x = a.pr_d(1);
     a.q1_ref_y = a.pr_d(2);
-    a.q1_ref_z = a.hdeck + a.pr_d(3);
+    a.q1_ref_z = a.pr_d(3);
 
     d_x = a.q1_ref_x; % Center of input region
     d_y = a.q1_ref_y; % Center of input region

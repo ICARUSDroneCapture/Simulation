@@ -24,21 +24,21 @@ plot_gain = false;
 
 % % ----------------------------- Non-Zero Gains ----------------------------
 
-% Inertial Stabilization Control
-a.ka = [1; 1; 9.8];  % Acceleration Control [kg]
-a.kv = [3; 3; 12];  % Velocity Control [kg]
+% % Inertial Stabilization Control
+% a.ka = [2; 2; 8];  % Acceleration Control [kg]
+% a.kv = [12; 12; 72];  % Velocity Control [kg]
 
 % Relative Position Control at center
-scale_pc = 1;
-a.kp_c = scale_pc*[0.1; 0.1; 5];  % Proportional [kg*s^-2]
-a.kd_c = scale_pc*[1; 1; 1];  % Derivative [kg/s]    
-a.ki_c = scale_pc*[0.01; 0.01; 0.01];  % Integral [kg*s^-3]
+scale_pc = 3;
+a.kp_c = scale_pc*[0.3; 0.3; 5];  % Proportional [kg*s^-2]
+a.kd_c = scale_pc*[0.0000001; 0.0000001; 1];  % Derivative [kg/s]    
+a.ki_c = scale_pc*[0.0000000001; 0.0000000001; 0.1];  % Integral [kg*s^-3]
 
 % Relative Position Control at boundaries
 scale_pb = 1;
-a.kp_b = scale_pb*[0.1; 0.1; 10];  % Proportional [kg*s^-2]
-a.kd_b = scale_pb*[0.01; 0.01; 1];  % Derivative [kg/s]    
-a.ki_b = scale_pb*[0.001; 0.001; 0.5];  % Integral [kg*s^-3]
+a.kp_b = scale_pb*[5; 5; 50];  % Proportional [kg*s^-2]
+a.kd_b = scale_pb*[1; 1; 30];  % Derivative [kg/s]    
+a.ki_b = scale_pb*[0.05; 0.05; 0.5];  % Integral [kg*s^-3]
 % 
 % % -------------------------------------------------------------------------
 
@@ -46,9 +46,9 @@ a.ki_b = scale_pb*[0.001; 0.001; 0.5];  % Integral [kg*s^-3]
 
 % ------------------------------- Zero Gains ------------------------------
 
-% % Inertial Stabilization Control
-% a.ka = [0; 0; 0];  % Acceleration Control [kg]
-% a.kv = [0; 0; 0];  % Velocity Control [kg]
+% Inertial Stabilization Control
+a.ka = [0; 0; 0];  % Acceleration Control [kg]
+a.kv = [0; 0; 0];  % Velocity Control [kg]
 
 % % Relative Position Control at center
 % scale = 1;

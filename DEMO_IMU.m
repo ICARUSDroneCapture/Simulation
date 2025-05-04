@@ -8,6 +8,8 @@ set(groot,'DefaultLineLineWidth',1)
 
 simulationParameters
 
+dir = "IMU_demo";
+
 %% Sensor Frame Accelerations
 
 a_I_over_time = [a.real_accel_xI(t), a.real_accel_yI(t), a.real_accel_zI(t)];
@@ -48,7 +50,7 @@ for i = 1:length(t)
 
 end
 
-figure
+fig = figure;
 subplot(3,1,1)
 plot(t, a.real_accel_xI(t))
 hold on
@@ -76,8 +78,10 @@ ylabel('Acceleration (m/s^2)')
 title('Measured Sensor Acceleration Z (m/s^2)')
 legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 
+saveas(fig, "figures/" + dir + "/sensor_frame_accels.png")
 
-figure
+
+fig = figure;
 subplot(3,1,1)
 plot(t, a.real_accel_xI(t))
 hold on
@@ -104,6 +108,8 @@ xlabel('Time (sec)')
 ylabel('Acceleration (m/s^2)')
 title('Inertial Acceleration Z Converted From Sensor (m/s^2)')
 legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
+
+saveas(fig, "figures/" + dir + "/inertial_frame_accels.png")
 
 % %% Get Error Signal
 % 
@@ -144,7 +150,7 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 % 
 % fprintf('\nFinished Integration WITH Sensor Error.\n')
 % 
-% figure
+% fig = figure;
 % plot(t_error, error_signals(:, 1))
 % hold on
 % plot(t_error, error_signals(:, 3))
@@ -156,7 +162,7 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 % title('Measured Accelerometer Signal')
 % % ylim([-5 5])
 % 
-% figure
+% fig = figure;
 % plot(t_error, error_signals(:, 4))
 % hold on
 % plot(t, a.real_ang_rate(t))
@@ -216,7 +222,7 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 % 
 % fprintf('\nFinished Integration WITH Sensor Error.\n')
 % 
-% figure
+% fig = figure;
 % plot(t_error, corrected_signals(:, 1))
 % hold on
 % plot(t_error, corrected_signals(:, 3))
@@ -228,7 +234,7 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 % title('Measured Accelerometer Signal')
 % % ylim([-5 5])
 % 
-% figure
+% fig = figure;
 % plot(t_error, corrected_signals(:, 4))
 % hold on
 % plot(t, a.real_ang_rate(t))
@@ -238,7 +244,7 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 % title('Measured Gyroscope Signal')
 % % ylim([-5 5])
 % 
-% figure
+% fig = figure;
 % plot(t_corr, int_sig_corr(:, 1))
 % hold on
 % plot(t_corr, int_sig_corr(:, 3))
@@ -250,7 +256,7 @@ legend('Inertial Frame Acceleration', 'Sensor Frame Acceleration')
 % title('Integrated Velocity Signal')
 % % ylim([-5 5])
 % 
-% figure
+% fig = figure;
 % plot(t_corr, int_sig_corr(:, 4))
 % hold on
 % plot(t, a.real_ang(t))
@@ -289,7 +295,7 @@ fprintf('\nFinished Integration WITH Sensor Compensation Control Law.\n')
 
 %% Plotting
 
-figure
+fig = figure;
 subplot(3,1,1)
 plot(t, a.theta(t))
 hold on
@@ -320,8 +326,10 @@ legend('NO Sensor Error', 'Controlled Error')
 title('Controlled Integrated Angle')
 ylim([-0.3 0.3])
 
+saveas(fig, "figures/" + dir + "/controlled_angles.png")
 
-figure
+
+fig = figure;
 subplot(3,1,1)
 plot(t, a.real_vel_xI(t))
 hold on
@@ -352,6 +360,8 @@ legend('NO Sensor Error', 'Controlled Error Integrated')
 title('Controlled Integrated (vertical) Velocity')
 % ylim([-5 5])
 
+saveas(fig, "figures/" + dir + "/controlled_velocities.png")
+
 %% Plotting Acceleration
 
 
@@ -359,7 +369,7 @@ accel_m_controlled_x = diff(int_state_corr(:, 1))/dt;
 accel_m_controlled_y = diff(int_state_corr(:, 2))/dt;
 accel_m_controlled_z = diff(int_state_corr(:, 3))/dt;
 
-figure
+fig = figure;
 subplot(3,1,1)
 plot(t, a.real_accel_xI(t))
 hold on
@@ -396,6 +406,8 @@ legend('NO Sensor Error', 'Controlled Error Integrated')
 title('Controlled Measured Acceleration Z')
 % ylim([-0.4 0.4]) 
 
+saveas(fig, "figures/" + dir + "/controlled_accels.png")
+
 %% Plotting Angular Velocity
 
 
@@ -403,7 +415,7 @@ gyro_m_controlled_theta = diff(int_state_corr(:, 4))/dt;
 gyro_m_controlled_phi = diff(int_state_corr(:, 5))/dt;
 gyro_m_controlled_psi = diff(int_state_corr(:, 6))/dt;
 
-figure
+fig = figure;
 subplot(3,1,1)
 plot(t, a.theta_dot(t))
 hold on
@@ -439,6 +451,8 @@ ylabel('Angular Velocity (rad/s)')
 legend('NO Sensor Error', 'Controlled Error Integrated')
 title('Controlled Measured Angular Velocity Psi')
 % ylim([-5 5])
+
+saveas(fig, "figures/" + dir + "/controlled_ang_vels.png")
 
 
 %% Functions

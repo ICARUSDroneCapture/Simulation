@@ -10,6 +10,8 @@ clear; clc; close all
 % constants
 constants;
 
+dir = "3DOFBasicError";
+
 % deck movement (Should be the same as those in EOM3D.m)
 syms t
 period = 7.5; %[s]
@@ -153,7 +155,7 @@ IsolationPercentz(i) = ((max_zEE-min_zEE)/0.5)*100;
 end
 
 % plotting the inertial positions of deck and end-effector
-figure()
+fig = figure;
 axis equal
 plot3(xB, yB, zB,"LineWidth",1.2);
 xlabel("X-axis [m]",'FontWeight','bold')
@@ -168,9 +170,11 @@ grid on
 view(-55,20)
 hold off
 
+saveas(fig, "../figures/" + dir + "/end_effector_inertial_pos.png")
+
 % plotting the inertial acceleration of the deck
 d_ddot = eval(subs(d_ddot,'t',sol.x));
-figure()
+fig = figure;
 subplot(3,1,1)
 plot(sol.x,d_ddot(1,:),"LineWidth",1.2);
 xlabel("Time [s]",'FontWeight','bold')
@@ -185,9 +189,11 @@ plot(sol.x,d_ddot(3,:),"LineWidth",1.2);
 xlabel("Time [s]",'FontWeight','bold')
 ylabel("Inertial Z Acc. [m/s^{s}]",'FontWeight','bold')
 
+saveas(fig, "../figures/" + dir + "/end_effector_accel.png")
+
 % plotting the X inertial position of the deck and end effector as well as
 % the isolation percentage
-figure()
+fig = figure;
 subplot(2,1,1)
 plot(sol.x,xEE,"LineWidth",1.2)
 xlabel("Time [s]",'FontWeight','bold')
@@ -208,9 +214,11 @@ hold off
 legend("Isolation Points","Required Percentage")
 title("Isolation Percentage (in X-Axis) at Various Time Points to Finish Time")
 
+saveas(fig, "../figures/" + dir + "/x_isolation.png")
+
 % plotting the Y inertial position of the deck and end effector as well as
 % the isolation percentage
-figure()
+fig = figure;
 subplot(2,1,1)
 plot(sol.x,yEE,"LineWidth",1.2)
 xlabel("Time [s]",'FontWeight','bold')
@@ -231,9 +239,11 @@ hold off
 legend("Isolation Points","Required Percentage")
 title("Isolation Percentage (in Y-Axis) at Various Time Points to Finish Time")
 
+saveas(fig, "../figures/" + dir + "/y_isolation.png")
+
 % plotting the Z inertial position of the deck and end effector as well as
 % the isolation percentage
-figure()
+fig = figure;
 subplot(2,1,1)
 plot(sol.x,zEE,"LineWidth",1.2)
 xlabel("Time [s]",'FontWeight','bold')
@@ -254,6 +264,8 @@ hold off
 legend("Isolation Points","Required Percentage")
 title("Isolation Percentage (in Z-Axis) at Various Time Points to Finish Time")
 
+saveas(fig, "../figures/" + dir + "/z_isolation.png")
+
 % torque values
 tau = zeros(3,length(sol.x));
 for i=1:length(sol.x)
@@ -261,7 +273,7 @@ for i=1:length(sol.x)
 end
 
 % plotting the torques of each joint
-figure()
+fig = figure;
 subplot(3,1,1)
 plot(sol.x,tau(1,:),"LineWidth",1.2)
 xlabel('Time [s]','FontWeight','bold')
@@ -277,6 +289,8 @@ plot(sol.x,tau(3,:),"LineWidth",1.2)
 xlabel('Time [s]','FontWeight','bold')
 ylabel('Input Torque [N.m]','FontWeight','bold')
 title('Input Torque of Joint 3')
+
+saveas(fig, "../figures/" + dir + "/torque_values.png")
 
 % animate
 animate3D(sol.x,sol.y,platform,d,theta_D)

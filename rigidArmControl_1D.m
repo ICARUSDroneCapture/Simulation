@@ -87,7 +87,7 @@ function state_dot = rigidArmControl_1D(t, a, prev_state, finishCalibrationTime)
     
 
     % Control gain proportions
-    a.q1_ref_z = a.hdeck + a.pr_d(3);
+    a.q1_ref_z = a.pr_d(3);
 
     d_z = a.q1_ref_z; % Center of input region
 
