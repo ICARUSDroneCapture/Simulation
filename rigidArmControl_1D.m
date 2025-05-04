@@ -35,7 +35,7 @@ function state_dot = rigidArmControl_1D(t, a, prev_state, finishCalibrationTime)
     
     % Error in relative position (distance to center of operation region)
     p = pi-a.real_pos_zI(t);
-    p_err = p-a.pr_d;
+    p_err = p-a.pr_d(3);
     
     % ----------------- Inserting measured accel manually -----------------
 
@@ -86,29 +86,23 @@ function state_dot = rigidArmControl_1D(t, a, prev_state, finishCalibrationTime)
     % ---------------------------------------------------------------------
     
 
-    % For testing gains without mixing proportions
-    % ka = a.ka; % Acceleration [kg]
-    % kv = a.kv; % Velocity     [kg/s]
-    % ks = a.ks; % Position     [kg*s^-2]
-    % kp = a.kp; % Proportional [kg*s^-2]
-    % kd = a.kd; % Derivative   [kg/s]
-    % ki = a.ki; % Integral     [kg*s^-3]
-    
     % Control gain proportions
-    
-    I = a.I(p); % Proportion of inertial stability control to apply
+    a.q1_ref_z = a.hdeck + a.pr_d(3);
 
-    ka = a.ka*I; % Acceleration [kg]
-    kv = a.kv*I; % Velocity     [kg/s]
-    ks = a.ks*I; % Position     [kg*s^-2]
-    
-    % k = a.K(p);     % Proportion of relative position control to apply
-    k_h = a.K_h(p);     % Proportion of relative position control to apply
+    d_z = a.q1_ref_z; % Center of input region
 
-    kp = a.kp*k_h;     % Proportional [kg*s^-2]
-    kd = a.kd*k_h;     % Derivative   [kg/s]
-    ki = a.ki*k_h;     % Integral     [kg*s^-3]
+    C = a.C(p, d_z);
+    B = a.B(p, d_z);
+
+    % Calculate gains with gain mixing
+    ka = a.ka(3).*C; % Acceleration [kg]
+    kv = a.kv(3).*C; % Acceleration [kg]
     
+    % Proportion of relative position control
+    kp = a.kp_c(3).*C + a.kp_b(3).*B; % Proportional 
+    kd = a.kd_c(3).*C + a.kd_b(3).*B; % Derivative   
+    ki = a.ki_c(3).*C + a.ki_b(3).*B; % Integral   
+
     % Derivative of states
     state_dot = zeros(6,1);
     
@@ -120,7 +114,7 @@ function state_dot = rigidArmControl_1D(t, a, prev_state, finishCalibrationTime)
     
     % Inertial stability control force
     c_i = a.initial_scale(t); % Initial scale of gains
-    f_i = -(ka*pm_ddot + kv*pm_dot + ks*pm)*c_i;
+    f_i = -(ka*pm_ddot + kv*pm_dot)*c_i;
     % Relative position control force
     f_pr = -(kp*p_err + ki*p_err_accum + kd*(pm_dot-a.real_vel_zI(t)));
     

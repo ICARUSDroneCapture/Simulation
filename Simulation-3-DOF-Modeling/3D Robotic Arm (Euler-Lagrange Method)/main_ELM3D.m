@@ -28,7 +28,10 @@ d =[dx;dy;dz];
 d_ddot = diff(d,'t',2);
 
 % -------------------------- Inserting imu error --------------------------
-d_ddot_error = a.measured_accel_3D(a, d_ddot);
+% d_ddot_error = a.measured_accel_3D(a, d_ddot);
+
+
+% -------------------------------------------------------------------------
 
 % the deck rotations
 angle1 = 0*t; % deck rotation about its x-axis [rad]
@@ -41,8 +44,7 @@ theta_D = [angle1;angle2;angle3];
 integral_error = [0;0;0];
 
 % solving the system
-freq = 160; %Hz
-time_interval = [0 30]; %seconds
+time_interval = [0 finishTime]; %seconds
 
 %---------------------------------------------
 % Reference parameters (for control)
@@ -95,9 +97,10 @@ Kd3 = 3*n;
 References = [ref_q1;ref_q2;ref_q3;r_B_ref(1);r_B_ref(2);r_B_ref(3)];
 Gains =[Ka;Kv;Kp;Ki;Kd;Kp1;Ki1;Kd1;Kp2;Ki2;Kd2;Kp3;Ki3;Kd3];
 
-initial_conditions = [-0.097971-0.3 -1.9315-0.5 0 0 0 0 0 0 0 0 0 0]; %[q1 q2 q3 Dq1 Dq2 Dq3 e_rpX e_rpY e_rpZ e_j1 e_j2 e_j3]
+% initial_conditions = [-0.097971-0.3 -1.9315-0.5 0 0 0 0 0 0 0 0 0 0]; %[q1 q2 q3 Dq1 Dq2 Dq3 e_rpX e_rpY e_rpZ e_j1 e_j2 e_j3]
+initial_conditions = [-0.097971-0.3 -1.9315-0.5 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]; %[q1 q2 q3 Dq1 Dq2 Dq3 e_rpX e_rpY e_rpZ e_j1 e_j2 e_j3]
 
-[sol.x, sol.y]= rk4_solver(@(t,x)EOM3D(t,x,platform,Gains,References),time_interval,initial_conditions,1/freq);
+[sol.x, sol.y]= rk4_solver(@(t,x)EOM3D(a, t,x,platform,Gains,References),time_interval,initial_conditions,1/freq);
 sol.y = sol.y';
 
 % plot q3, q3_dot, q1, q1_dot, q2, q2_dot over time
@@ -156,7 +159,7 @@ ylabel("Inertial Z Acc. [m/s^{s}]")
 % torque values
 tau = zeros(3,length(sol.x));
 for i=1:length(sol.x)
-[~,tau(:,i)] = EOM3D(sol.x(i),sol.y(:,i),platform,Gains,References);
+[~,tau(:,i)] = EOM3D(a, sol.x(i),sol.y(:,i),platform,Gains,References);
 end
 
 % plotting the torques of each joint

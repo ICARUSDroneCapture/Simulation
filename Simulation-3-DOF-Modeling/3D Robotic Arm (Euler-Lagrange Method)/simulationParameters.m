@@ -1,9 +1,9 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%% Arm Parameters %%%%%%%%%%%%%%%%%%%%%%%
 
-a.m = 1;    % Mass [kg]
+a.m = 3.08;    % Mass [kg]
 a.g = 9.81; % Acceleration of gravity [m/s^2]
-a.pr_d = 0.5; % Desired relative position [m]
+a.pr_d = [0; 0; 0.5]; % Desired relative position [m]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%% Environmental Model %%%%%%%%%%%%%%%%%%%%
@@ -21,31 +21,47 @@ plot_gain = false;
 %   a.ka = 2800; a.kv = ?; a.ks = ?;
 %   a.kp = 1000; a.kd = 10; a.ki = 100;
 
-% Inertial Stabilization Control
-% a.ka = 700;  % Acceleration Control [kg]
-% a.kv = 5000;  % Velocity Control [kg/s]
-% a.ks = 0;  % Position Control [kg*s^-2]
 
-% % Relative Position Control
-% a.kp = 1.2;  % Proportional [N/m]
-% a.kd = 0.4;  % Derivative [Ns/m]    
-% a.ki = 0;  % Integral [N/ms]
+% % ----------------------------- Non-Zero Gains ----------------------------
+
+% % Inertial Stabilization Control
+% a.ka = [0.1; 0.1; 0.98];  % Acceleration Control [kg]
+% a.kv = [0.3; 0.3; 1.2];  % Velocity Control [kg]
+
+% Relative Position Control at center
+scale_pc = 1000;
+a.kp_c = scale_pc*[0.1; 0.1; 0.003];  % Proportional [kg*s^-2]
+a.kd_c = scale_pc*[1; 1; 0.6];  % Derivative [kg/s]    
+a.ki_c = scale_pc*[0.01; 0.01; 0.0012];  % Integral [kg*s^-3]
+
+% Relative Position Control at boundaries
+scale_pb = 1;
+a.kp_b = scale_pb*[0.1; 0.1; 50];  % Proportional [kg*s^-2]
+a.kd_b = scale_pb*[0.01; 0.01; 10];  % Derivative [kg/s]    
+a.ki_b = scale_pb*[0.001; 0.001; 0.5];  % Integral [kg*s^-3]
 % 
-% % % Inertial Stabilization Control
-% a.ka =  1.2;  % Acceleration Control [kg]
-% a.kv = 12;  % Velocity Control [kg/s]
-% a.ks = 0;  % Position Control [kg*s^-2]
+% % -------------------------------------------------------------------------
 
 
-% Relative Position Control
-a.kp = 10;  % Proportional [N/m]
-a.kd = 2;  % Derivative [Ns/m]    
-a.ki = 0;  % Integral [N/ms]
+
+% ------------------------------- Zero Gains ------------------------------
 
 % Inertial Stabilization Control
-a.ka =  0.98;  % Acceleration Control [kg]
-a.kv = 4;  % Velocity Control [kg/s]
-a.ks = 0;  % Position Control [kg*s^-2]
+a.ka = [0; 0; 0];  % Acceleration Control [kg]
+a.kv = [0; 0; 0];  % Velocity Control [kg]
+
+% % Relative Position Control at center
+% scale = 1;
+% a.kp_c = scale*[0; 0; 0];  % Proportional [kg*s^-2]
+% a.kd_c = scale*[0; 0; 0];  % Derivative [kg/s]
+% a.ki_c = scale*[0; 0; 0];  % Integral [kg*s^-3]
+% 
+% % Relative Position Control at boundaries
+% a.kp_b = [0; 0; 0];  % Proportional [kg*s^-2]
+% a.kd_b = [0; 0; 0];  % Derivative [kg/s]    
+% a.ki_b = [0; 0; 0];  % Integral [kg*s^-3]
+
+% -------------------------------------------------------------------------
 
 % % Inertial Stabilization Control
 % a.ka =  0.98;  % Acceleration Control [kg]
@@ -119,6 +135,36 @@ if plot_gain
     legend('Inertial','Relative','Non-zero Relative')
     grid on
 end
+
+% -------------------------- Parameters -------------------------------- %
+
+a.w = 1; % Range of inputs
+
+% Piecewise radii
+c = 0.5;
+r_c = a.w/2*c; % Full isolation control radius
+
+b = 0.5;
+r_b = a.w/2*b; % Zero relative position control radius
+
+% Polynomial order
+n = 4;
+
+% --------------------------- Mixing Functions ------------------------- %
+
+% Center gain scale (inertial isolation)
+a_c = -1 / abs(r_c - a.w/2)^n;
+k_c = 1;
+a.C = @(x, d) 1 .* (abs(x - d) <= r_c) ...
+       + (a_c*abs(x-(d+sign(x-d)*r_c)).^n + k_c) .* (abs(x - d) > r_c & ...
+       abs(x - d) <= a.w/2);
+
+% Boundary gain scale (relative position control)
+a_b = 1 / abs(r_b - a.w/2)^n;
+k_b = 0;
+a.B = @(x, d) (a_b*abs(x-(d+sign(x-d)*r_b)).^n + k_b) .* (abs(x - d) > r_b & ...
+       abs(x - d) <= a.w/2) ...
+       + 1 .* (abs(x - d) > a.w/2);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%% Performance Parameters %%%%%%%%%%%%%%%%%%%

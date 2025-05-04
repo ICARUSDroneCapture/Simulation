@@ -60,13 +60,14 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     pm = [pm_x; pm_y; pm_z];
     pm_dot = [pm_dot_x; pm_dot_y; pm_dot_z];
     pm_ddot = [pm_ddot_x; pm_ddot_y; pm_ddot_z];
-
+    
     p_theta = [theta; phi; psi];
     p_theta_err_accum = [p_theta_err_accum; p_phi_err_accum; p_psi_err_accum];
 
     % ------------------------- Check Reference Frames --------------------
     
     real_pos = [a.real_pos_xI(t); a.real_pos_yI(t); a.real_pos_zI(t)];
+    real_vel = [a.real_vel_xI(t); a.real_vel_yI(t); a.real_vel_zI(t)];
 
     % Error in relative position (distance to center of operation region)
     p = pi-real_pos;
@@ -121,18 +122,25 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     
     % Control gain proportions
     
-    I = a.I(p); % Proportion of inertial stability control to apply
+    a.q1_ref_x = a.pr_d(1);
+    a.q1_ref_y = a.pr_d(2);
+    a.q1_ref_z = a.hdeck + a.pr_d(3);
 
-    ka = a.ka*I; % Acceleration [kg]
-    kv = a.kv*I; % Velocity     [kg/s]
-    ks = a.ks*I; % Position     [kg*s^-2]
+    d_x = a.q1_ref_x; % Center of input region
+    d_y = a.q1_ref_y; % Center of input region
+    d_z = a.q1_ref_z; % Center of input region
+
+    C = [a.C(p(1), d_x); a.C(p(2), d_y); a.C(p(3), d_z)];
+    B = [a.B(p(1), d_x); a.B(p(2), d_y); a.B(p(3), d_z)];
+
+    % Calculate gains with gain mixing
+    ka = a.ka.*C; % Acceleration [kg]
+    kv = a.kv.*C; % Acceleration [kg]
     
-    % k = a.K(p);     % Proportion of relative position control to apply
-    k_h = a.K_h(p);     % Proportion of relative position control to apply
-
-    kp = a.kp*k_h;     % Proportional [kg*s^-2]
-    kd = a.kd*k_h;     % Derivative   [kg/s]
-    ki = a.ki*k_h;     % Integral     [kg*s^-3]
+    % Proportion of relative position control
+    kp = a.kp_c.*C + a.kp_b.*B; % Proportional 
+    kd = a.kd_c.*C + a.kd_b.*B; % Derivative   
+    ki = a.ki_c.*C + a.ki_b.*B; % Integral   
     
     % Derivative of states
     state_dot = zeros(24,1);
@@ -145,9 +153,9 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     
     % Inertial stability control force
     c_i = a.initial_scale(t); % Initial scale of gains
-    f_i = -(ka.*pm_ddot + kv.*pm_dot + ks.*pm)*c_i;
+    f_i = -(ka.*pm_ddot + kv.*pm_dot)*c_i;
     % Relative position control force
-    f_pr = -(kp.*p_err + ki.*p_err_accum + kd.*(pm_dot-a.real_vel_zI(t)));
+    f_pr = -(kp.*p_err + ki.*p_err_accum + kd.*(pm_dot-real_vel));
     
     % Platform EOM
     p_ddot = (f_i+f_pr) / a.m;
@@ -158,10 +166,11 @@ function state_dot = rigidArmControl_3D(t, a, prev_state)
     
     % Derivative of measured inertial acceleration
     state_dot(16:18) = a.omega*(p_ddot - pm_ddot);
+    % state_dot(16:18) = pm_ddot / a.dt;
     
     % Error in relative position
     state_dot(7:9) = p_err;
-    
+
     % Derivative of angle
     state_dot(19:21) = p_theta_dot; % Angular Rate
     

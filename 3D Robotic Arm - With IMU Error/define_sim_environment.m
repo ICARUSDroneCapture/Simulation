@@ -1,19 +1,5 @@
 %% Simulation Duration and Timesteps
 
-% Simulation time
-startTime = 0;
-finishTime = 60;
-tspan = [startTime finishTime]; % [s]
-
-finishCalibrationTime = 60; % seconds
-
-% dt = 1/imu_rate;  % [s]
-dt = 0.0001;
-a.dt = dt;
-t = (tspan(1):dt:tspan(2))';
-t_count = length(t);
-indeces = @(t) floor(t/dt)+1;
-
 %% Sensor Model Aspects
 
 defineSignals
@@ -26,22 +12,14 @@ hdeck = 1;   % inertial reference deck hight [m] (arbitrary)
 a.hdeck = hdeck;
 
 % Wave frequency
-t_min = 2.5;     % Minimum period [s]
-t_max = 9;    % Maximum period [s]
-
-period = 7.5;    % Expected period [s]
-
-period_small = 2; % Small period of 2 seconds for x/y translations
-period_big = 7.5; % Big period of 7.5 (maybe 10) seconds for z motion
-
-amp_small = 20;
-amp_big = 5;
+period = 7.5; %s
+xamplitude = 0; %wave amplitude [m]
+yamplitude = 0; %wave amplitude [m]
+zamplitude = 0.1; %wave amplitude [m]
 
 k = 1;
 T = period / k;  % Period of deck disturbance [s]
 beta = 2*pi/T; % wave frequency [rad/s]
-a.beta_min = 1/t_max; % Minimum frequency [Hz]
-a.beta_max = 1/t_min; % Maximum frequency [Hz]
  
 % Cosine Wave
 % a.d = @(t) alpha*cos(beta*t) + hdeck;      % [m]
@@ -240,25 +218,25 @@ a.kt = [scale_w*a.beta_min_x_accel; scale_w*a.beta_min_y_accel; scale_w*a.beta_m
 
 % ------------------- Dynamics Equations used in 3 DOF --------------------
 
-a.real_pos_xI = @(t) 0.5/amp_small*cos((2*pi/period_big)*t);
-a.real_pos_yI = @(t) 0.5/amp_small*cos((2*pi/period_big)*t);
-a.real_pos_zI = @(t) 0.5/amp_big*cos((2*pi/period_big)*t) + hdeck;
+a.real_pos_xI = @(t) xamplitude*cos((2*pi/period)*t); %[m]
+a.real_pos_yI = @(t) yamplitude*cos((2*pi/period)*t); %[m]
+a.real_pos_zI = @(t) zamplitude*cos((2*pi/period)*t) + hdeck; %[m]
 
-a.real_vel_xI = @(t) -0.5/amp_small*(2*pi/period_big)*sin((2*pi/period_big)*t);
-a.real_vel_yI = @(t) -0.5/amp_small*(2*pi/period_big)*sin((2*pi/period_big)*t);
-a.real_vel_zI = @(t) -0.5/amp_big*(2*pi/period_big)*sin((2*pi/period_big)*t);
+a.real_vel_xI = @(t) -xamplitude*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
+a.real_vel_yI = @(t) -yamplitude*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
+a.real_vel_zI = @(t) -zamplitude*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
 
-a.real_accel_xI = @(t, y) -0.5/amp_small*((2*pi/period_big)^2)*cos((2*pi/period_big)*t); % [m*s^-2]
-a.real_accel_yI = @(t, y) -0.5/amp_small*((2*pi/period_big)^2)*cos((2*pi/period_big)*t); % [m*s^-2]
-a.real_accel_zI = @(t, y) -0.5/amp_big*((2*pi/period_big)^2)*cos((2*pi/period_big)*t) - a.g; % [m*s^-2]
+a.real_accel_xI = @(t, y) -xamplitude*((2*pi/period)^2)*cos((2*pi/period)*t); %[m/s^2]
+a.real_accel_yI = @(t, y) -yamplitude*((2*pi/period)^2)*cos((2*pi/period)*t); %[m/s^2]
+a.real_accel_zI = @(t, y) -zamplitude*((2*pi/period)^2)*cos((2*pi/period)*t) - a.g; %[m/s^2]
 
-a.theta = @(t) 10/amp_small*(pi/180)*sin((2*pi/(period_big))*t); % [rad]
-a.phi = @(t) 10/amp_big*(pi/180)*sin((2*pi/(period_big))*t); % [rad]
-a.psi = @(t) 10/amp_small*(pi/180)*sin((2*pi/(period_big))*t); % [rad]
+a.theta = @(t) 10*yamplitude*(pi/180)*sin((2*pi/(period))*t); % [rad]
+a.phi = @(t) 10*zamplitude*(pi/180)*sin((2*pi/(period))*t); % [rad]
+a.psi = @(t) 10*xamplitude*(pi/180)*sin((2*pi/(period))*t); % [rad]
 
-a.theta_dot = @(t, y) 20/amp_small*(pi/180)*(pi/period_big)*cos((2*pi/period_big)*t);
-a.phi_dot = @(t, y) 20/amp_big*(pi/180)*(pi/period_big)*cos((2*pi/period_big)*t);
-a.psi_dot = @(t, y) 20/amp_small*(pi/180)*(pi/period_big)*cos((2*pi/period_big)*t);
+a.theta_dot = @(t, y) 20*yamplitude*(pi/180)*(pi/period)*cos((2*pi/period)*t);
+a.phi_dot = @(t, y) 20*zamplitude*(pi/180)*(pi/period)*cos((2*pi/period)*t);
+a.psi_dot = @(t, y) 20*xamplitude*(pi/180)*(pi/period)*cos((2*pi/period)*t);
 
 % -------------------------------------------------------------------------
 

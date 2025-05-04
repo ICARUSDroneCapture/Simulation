@@ -16,7 +16,7 @@ fprintf("\nTime: ")
 % Initial States
 
 % Initial States
-p0 =  hdeck + a.pr_d;             % Platform position [m]
+p0 =  hdeck + a.pr_d(3);             % Platform position [m]
 p_dot0 = 0;             % Platform velocity [m/s]
 pr_err_accum0 = 0;                      % Integral of relative position error [m*s]
 pm0 = p0;                               % Platform integrated position [m]

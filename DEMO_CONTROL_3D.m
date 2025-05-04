@@ -14,14 +14,14 @@ fprintf('\nStarting Integration with NO Sensor Error.')
 fprintf("\nTime: ")
 
 % Initial States
-p0_x = 0;
-p0_y = 0;
-p0_z = hdeck + a.pr_d;
+p0_x = a.pr_d(1);
+p0_y = a.pr_d(2);
+p0_z = hdeck + a.pr_d(3);
 p0 = [p0_x p0_y p0_z];
 
-p_dot0_x = 0;
-p_dot0_y = 0;
-p_dot0_z = 0;
+p_dot0_x = a.real_vel_xI(tspan(1));
+p_dot0_y = a.real_vel_yI(tspan(1));
+p_dot0_z = a.real_vel_zI(tspan(1));
 p_dot0 = [p_dot0_x p_dot0_y p_dot0_z];
 
 pr_err_accum0_x = 0;
@@ -46,6 +46,49 @@ control_dynamics = @(t, state) NoError_FixedInt_3D(t, a, state);
 
 
 fprintf('\nFinished Integration with NO Sensor Error.\n')
+
+subplot(3,1,1)
+plot(t, sol_control(:,1))
+hold on
+plot(t,a.real_pos_xI(t))
+yline(0, 'g--')
+ylim([-0.5 0.5])
+title('Platform Inertial Y Position vs Time')
+xlabel('Time (s)')
+ylabel('Position (m)')
+title('Platform Inertial Y Position over Time')
+legend('Fixed-Step (without sensor error) Integration', 'Deck Motion')
+
+subplot(3,1,2)
+plot(t, sol_control(:,2))
+hold on
+plot(t,a.real_pos_yI(t))
+hold on
+yline(0, 'g--')
+ylim([-0.5 0.5])
+title('Platform Inertial X Position vs Time')
+xlabel('Time (s)')
+ylabel('Position (m)')
+title('Platform Inertial X Position over Time')
+legend('Fixed-Step (without sensor error) Integration', 'Deck Motion')
+
+subplot(3,1,3)
+plot(t, sol_control(:,3))
+hold on
+plot(t,a.real_pos_zI(t))
+hold on
+plot(t, a.real_pos_zI(t)+1)
+hold on
+plot(t, a.real_pos_zI(t)+0.09, '--')
+hold on
+plot(t, a.real_pos_zI(t)+0.5+0.41, '--')
+ylim([0 3])
+title('Platform Inertial Z Position vs Time')
+xlabel('Time (s)')
+ylabel('Position (m)')
+title('Platform Inertial Z Position over Time')
+legend('Fixed-Step (without sensor error) Integration')
+
 
 %% Running Control Law Simulation WITH Sensor Error
 

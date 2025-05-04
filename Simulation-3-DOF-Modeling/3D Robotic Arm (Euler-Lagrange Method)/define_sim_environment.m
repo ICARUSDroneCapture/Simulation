@@ -2,13 +2,16 @@
 
 % Simulation time
 startTime = 0;
-finishTime = 30;
+finishTime = 120;
 tspan = [startTime finishTime]; % [s]
 
-finishCalibrationTime = 60; % seconds
+a.finishCalibrationTime = 60; % seconds
 
 % dt = 1/imu_rate;  % [s]
-dt = 0.0001;
+% dt = 0.0001;
+
+freq = 160; % Hz
+dt = 1/freq;
 a.dt = dt;
 t = (tspan(1):dt:tspan(2))';
 t_count = length(t);
@@ -34,8 +37,8 @@ period = 7.5;    % Expected period [s]
 period_small = 2; % Small period of 2 seconds for x/y translations
 period_big = 7.5; % Big period of 7.5 (maybe 10) seconds for z motion
 
-amp_small = 1;
-amp_big = 1;
+amp_small = 20;
+amp_big = 5;
 
 k = 1;
 T = period / k;  % Period of deck disturbance [s]

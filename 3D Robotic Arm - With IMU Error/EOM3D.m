@@ -1,8 +1,5 @@
-function [X_dot,tau] = EOM3D(a,t,X,platform,Gains,References)
+function [X_dot,tau] = EOM3D(t,X,platform,Gains,References, a)
 % SUMMARY
-
-% systems constants
-% constants;
 
 r1 = platform.r1;
 r2 = platform.r2;
@@ -12,38 +9,38 @@ m1 = platform.m1;
 m2 = platform.m2;
 g = platform.g;
 
-% time step
-% dt = 1/160;
-
-% deck translations
-dx = 0*t; %[m]
-dy = 0*t; %[m]
+% deck translations (for controls)
 period = 7.5; %s
-dz = 0.5*cos((2*pi/period)*t); %[m]
+xamplitude = 0; %wave amplitude [m]
+yamplitude = 0; %wave amplitude [m]
+zamplitude = 0.1; %wave amplitude [m]
+dx = xamplitude*cos((2*pi/period)*t); %[m]
+dy = yamplitude*cos((2*pi/period)*t); %[m]
+dz = zamplitude*cos((2*pi/period)*t); %[m]
 
-dx_dot = 0; %[m/s]
-dy_dot = 0; %[m/s]
-dz_dot = -0.5*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
+dx_dot = -xamplitude*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
+dy_dot = -yamplitude*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
+dz_dot = -zamplitude*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
 
-dx_ddot = 0; %[m/s^2]
-dy_ddot = 0; %[m/s^2]
-dz_ddot = -0.5*((2*pi/period)^2)*cos((2*pi/period)*t); %[m/s^2]
+dx_ddot = -xamplitude*((2*pi/period)^2)*cos((2*pi/period)*t); %[m/s^2]
+dy_ddot = -yamplitude*((2*pi/period)^2)*cos((2*pi/period)*t); %[m/s^2]
+dz_ddot = -zamplitude*((2*pi/period)^2)*cos((2*pi/period)*t); %[m/s^2]
 
-d = [dx;dy;dz];
-d_dot = [dx_dot;dy_dot;dz_dot];
+% d = [dx;dy;dz];
+% d_dot = [dx_dot;dy_dot;dz_dot];
 d_ddot = [dx_ddot;dy_ddot;dz_ddot];
 
-% deck rotations
+% deck rotations (for controls)
 angle1 = 0; %[rad]
-angle2 = 10*(pi/180)*sin((2*pi/(period))*t); %[rad]
+angle2 = 0; %10*(pi/180)*sin((2*pi/(period))*t); %[rad]
 angle3 = 0; %[rad]
 
 angle1_dot = 0; %[rad/s]
-angle2_dot = 20*(pi/180)*(pi/(period))*cos((2*pi/(period))*t); %[rad/s]
+angle2_dot = 0; %10*(pi/180)*(2*pi/(period))*cos((2*pi/(period))*t); %[rad/s]
 angle3_dot = 0; %[rad/s]
 
 angle1_ddot = 0; %[rad/s^2]
-angle2_ddot = -40*(pi/180)*((pi/period)^2)*sin((2*pi/(period))*t); %[rad/s^2]
+angle2_ddot = 0; %-10*(pi/180)*((2*pi/(period))^2)*sin((2*pi/(period))*t); %[rad/s^2]
 angle3_ddot = 0; %[rad/s^2]
 
 theta_D_dot = [angle1_dot;angle2_dot;angle3_dot];
@@ -63,57 +60,78 @@ int_error_joint1 = X(10);
 int_error_joint2 = X(11);
 int_error_joint3 = X(12);
 
-% ----------------- Inserting measured accel manually -----------------
+eeVx = X(13);
+eeVy = X(14);
+eeVz = X(15);
 
-theta = X(13);
-phi = X(14);
-psi = X(15);
+d_dot = [eeVx;eeVy;eeVz];
 
-p_theta_err_accum = X(16);
-p_phi_err_accum = X(17);
-p_psi_err_accum = X(18);
+% --------------------- Use Preintegrated Acceleration --------------------
 
-p_theta = [theta; phi; psi];
-p_theta_err_accum = [p_theta_err_accum; p_phi_err_accum; p_psi_err_accum];
+t_to_index = floor(t./a.dt)+1;
 
-% Get REAL inertial acceleration (this has g in it)
-accel_S = a.measured_accel_3D(a, t, d_ddot);
-
-% Add sensor error to gyroscope measurements
-gyro_m = a.measured_gyro_3D(a, t, theta_D_dot);
-
-% Rotate inertial acceleration to sensor frame base on real angle/acceleration
-a_S = Rotate_I_S(accel_S, angle1, angle2, angle3);
-
-theta_use = p_theta(1);
-phi_use = p_theta(2);
-psi_use = p_theta(3);
-
-% Rotate realistic sensor acceleration measurements back to inertial
-% frame (still has g), using our INTEGRATED angle (has integration error)
-accel_I = Rotate_S_I(a_S, theta_use, phi_use, psi_use);
-
-% Assign our acceleration and gyroscope measurements, with gravity
-% removed, to our vector for sensor error correction
-measured_state = [accel_I; gyro_m]';
-
-% Compensate for constant error values
-corrected_state = compensateError(measured_state, a.specs, t);
-
-% input: [velocity; theta; position; theta_err_accum]
-% output: [accel; theta_dot; vel; theta]
-int_state = [d_dot; p_theta; d; p_theta_err_accum];
-state_control = DriftCorrection3D(a, int_state, corrected_state);
-
-p_theta_dot = state_control(4:6);
-p_theta_err = state_control(12:12);
-
-if t > a.finishCalibrationTime
-    d_ddot = state_control(1:3);
-    d_dot = state_control(7:9);
+if t_to_index > length(a.imu_data)
+    t_to_index = length(a.imu_data);
 end
 
-% ---------------------------------------------------------------------
+imu_data_t = a.imu_data(:, t_to_index);
+
+% Add error!!
+d_ddot = imu_data_t;
+
+% -------------------------------------------------------------------------
+
+% % ----------------- Inserting measured accel manually -----------------
+% 
+% theta = X(13);
+% phi = X(14);
+% psi = X(15);
+% 
+% p_theta_err_accum = X(16);
+% p_phi_err_accum = X(17);
+% p_psi_err_accum = X(18);
+% 
+% p_theta = [theta; phi; psi];
+% p_theta_err_accum = [p_theta_err_accum; p_phi_err_accum; p_psi_err_accum];
+% 
+% % Get REAL inertial acceleration (this has g in it)
+% accel_S = a.measured_accel_3D(a, t, d_ddot);
+% 
+% % Add sensor error to gyroscope measurements
+% gyro_m = a.measured_gyro_3D(a, t, theta_D_dot);
+% 
+% % Rotate inertial acceleration to sensor frame base on real angle/acceleration
+% a_S = Rotate_I_S(accel_S, angle1, angle2, angle3);
+% 
+% theta_use = p_theta(1);
+% phi_use = p_theta(2);
+% psi_use = p_theta(3);
+% 
+% % Rotate realistic sensor acceleration measurements back to inertial
+% % frame (still has g), using our INTEGRATED angle (has integration error)
+% accel_I = Rotate_S_I(a_S, theta_use, phi_use, psi_use);
+% 
+% % Assign our acceleration and gyroscope measurements, with gravity
+% % removed, to our vector for sensor error correction
+% measured_state = [accel_I; gyro_m]';
+% 
+% % Compensate for constant error values
+% corrected_state = compensateError(measured_state, a.specs, t);
+% 
+% % input: [velocity; theta; position; theta_err_accum]
+% % output: [accel; theta_dot; vel; theta]
+% int_state = [d_dot; p_theta; d; p_theta_err_accum];
+% state_control = DriftCorrection3D(a, int_state, corrected_state);
+% 
+% p_theta_dot = state_control(4:6);
+% p_theta_err = state_control(12:12);
+% 
+% % if t > a.finishCalibrationTime
+% %     d_ddot = state_control(1:3);
+% %     d_dot = state_control(7:9);
+% % end
+% 
+% % ---------------------------------------------------------------------
 
 
 % Controls
@@ -164,7 +182,7 @@ error_joint1 = ref_q1-sq1;
 error_joint2 = ref_q2-sq2;
 error_joint3 = ref_q3-sq3;
 
-% torque of motors
+% torque of motors (joint relative position control)
 tau1 =  Kp1*(error_joint1)+Ki1*int_error_joint1-Kd1*sDq1; %[N.m]
 tau2 =  Kp2*(error_joint2)+Ki2*int_error_joint2-Kd2*sDq2; %[N.m]
 tau3 =  Kp3*(error_joint3)+Ki3*int_error_joint3-Kd3*sDq3; %[N.m]
@@ -208,7 +226,7 @@ error_rp = r_I_ref - r_I;
 % numerical integral of the error in the end-effector inertial relative position
 int_error = [int_error_rpX;int_error_rpY;int_error_rpZ];
 
-% partial control force
+% partial control force (cartesian)
 partial_F_control = -Ka*(d_ddot+Jdot*[sDq1;sDq2;sDq3])+Kv*(-d_dot-J*[sDq1;sDq2;sDq3])+Kp*error_rp+Ki*int_error-Kd*J*[sDq1;sDq2;sDq3];
 
 % partial control torque
@@ -218,6 +236,43 @@ tau_prime = [tau1;tau2;tau3] + partial_tau;
 
 % End of Controls
 %-------------------------------------------------------------------------%
+
+% deck translations (Should be the same as those in main_ELM3D.m)
+period = 7.5; %s
+xamplitude = 0; %wave amplitude [m]
+yamplitude = 0; %wave amplitude [m]
+zamplitude = 0.1; %wave amplitude [m]
+dx = xamplitude*cos((2*pi/period)*t); %[m]
+dy = yamplitude*cos((2*pi/period)*t); %[m]
+dz = zamplitude*cos((2*pi/period)*t); %[m]
+
+dx_dot = -xamplitude*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
+dy_dot = -yamplitude*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
+dz_dot = -zamplitude*(2*pi/period)*sin((2*pi/period)*t); %[m/s]
+
+dx_ddot = -xamplitude*((2*pi/period)^2)*cos((2*pi/period)*t); %[m/s^2]
+dy_ddot = -yamplitude*((2*pi/period)^2)*cos((2*pi/period)*t); %[m/s^2]
+dz_ddot = -zamplitude*((2*pi/period)^2)*cos((2*pi/period)*t); %[m/s^2]
+
+d = [dx;dy;dz];
+d_dot = [dx_dot;dy_dot;dz_dot];
+d_ddot = [dx_ddot;dy_ddot;dz_ddot];
+
+% deck rotations (Should be the same as those in main_ELM3D.m)
+angle1 = 0; %[rad]
+angle2 = 0; %10*(pi/180)*sin((2*pi/(period))*t); %[rad]
+angle3 = 0; %[rad]
+
+angle1_dot = 0; %[rad/s]
+angle2_dot = 0; %10*(pi/180)*(2*pi/(period))*cos((2*pi/(period))*t); %[rad/s]
+angle3_dot = 0; %[rad/s]
+
+angle1_ddot = 0; %[rad/s^2]
+angle2_ddot = 0; %-10*(pi/180)*((2*pi/(period))^2)*sin((2*pi/(period))*t); %[rad/s^2]
+angle3_ddot = 0; %[rad/s^2]
+
+theta_D_dot = [angle1_dot;angle2_dot;angle3_dot];
+theta_D_ddot = [angle1_ddot;angle2_ddot;angle3_ddot];
 
 % moments of inertia
 I1 = [platform.Ixx1 platform.Ixy1 platform.Ixz1;platform.Iyx1 platform.Iyy1 platform.Iyz1; platform.Izx1 platform.Izy1 platform.Izz1]; %link 1
@@ -503,10 +558,12 @@ tau = tau_prime-Ka*(J')*J*q_ddot;
 
 X_dot = [sDq1;sDq2;sDq3;q_ddot(1);q_ddot(2);q_ddot(3);error_rp(1);error_rp(2);error_rp(3);error_joint1;error_joint2;error_joint3];
 
-% Derivative of angle
-X_dot(13:15) = p_theta_dot; % Angular Rate
+X_dot(13:15) = d_ddot;
 
-% Theta error
-X_dot(16:18) = p_theta_err;
+% % Derivative of angle
+% X_dot(13:15) = p_theta_dot; % Angular Rate
+% 
+% % Theta error
+% X_dot(16:18) = p_theta_err;
 
 end
